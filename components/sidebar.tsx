@@ -9,6 +9,7 @@ import Image from "next/image";
 
 const menu = [
   { label: "Мэдээ мэдээлэл", icon: Newspaper, href: "/dashboard/news" },
+  { label: "Видео мэдээ", icon: Newspaper, href: "/dashboard/videonews" },
 ];
 
 const researchSubMenu = [

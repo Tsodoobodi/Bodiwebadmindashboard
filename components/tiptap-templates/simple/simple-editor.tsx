@@ -184,7 +184,9 @@ type SimpleEditorProps = {
 export function SimpleEditor({ content, onChange }: SimpleEditorProps) {
   const isMobile = useIsMobile();
   const { height } = useWindowSize();
-  const [mobileView, setMobileView] = React.useState<"main" | "highlighter" | "link">("main");
+  const [mobileView, setMobileView] = React.useState<
+    "main" | "highlighter" | "link"
+  >("main");
   const toolbarRef = React.useRef<HTMLDivElement>(null);
 
   const editor = useEditor({
@@ -229,7 +231,7 @@ export function SimpleEditor({ content, onChange }: SimpleEditorProps) {
   });
 
   // Call onChange with HTML content on every editor update
- React.useEffect(() => {
+  React.useEffect(() => {
     if (editor && content !== undefined && content !== editor.getHTML()) {
       editor.commands.setContent(content);
     }
