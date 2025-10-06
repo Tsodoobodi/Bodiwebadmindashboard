@@ -16,6 +16,9 @@ interface NewsItem {
   updated_at?: string;
 }
 
+// API URL - environment variable ашиглана
+const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:5001";
+
 export default function NewsPage() {
   const [news, setNews] = useState<NewsItem[]>([]);
   const [query, setQuery] = useState("");
@@ -46,11 +49,10 @@ export default function NewsPage() {
     return typeof json === "string" ? json : "";
   };
 
-  // useCallback ашиглаж fetchNews-ийг мemoize хийнэ
   const fetchNews = useCallback(async () => {
     try {
       setLoading(true);
-      const res = await axios.get("http://localhost:5001/api/news");
+      const res = await axios.get(`${API_URL}/api/news`);
       const newsData = res.data.data || res.data;
 
       const formattedNews = newsData.map((item: NewsItem) => ({
@@ -67,19 +69,17 @@ export default function NewsPage() {
     } finally {
       setLoading(false);
     }
-  }, []); // jsonToHTML нь pure function учир dependency хэрэггүй
+  }, []);
 
   useEffect(() => {
     fetchNews();
-  }, [fetchNews]); // fetchNews-ийг dependency-д нэмсэн
-
-  // ... бусад функцууд өөрчлөлтгүй
+  }, [fetchNews]);
 
   const handleDelete = async (id: string) => {
     const confirmed = window.confirm("Та устгахдаа итгэлтэй байна уу?");
     if (!confirmed) return;
     try {
-      await axios.delete(`http://localhost:5001/api/news/${id}`);
+      await axios.delete(`${API_URL}/api/news/${id}`);
       setNews(news.filter((item) => item.id !== id));
     } catch (err) {
       console.error("Delete error:", err);
@@ -124,7 +124,7 @@ export default function NewsPage() {
 
       if (editId) {
         const res = await axios.put(
-          `http://localhost:5001/api/news/${editId}`,
+          `${API_URL}/api/news/${editId}`,
           payload
         );
         const updatedItem = res.data.data || res.data;
@@ -136,7 +136,7 @@ export default function NewsPage() {
           )
         );
       } else {
-        const res = await axios.post("http://localhost:5001/api/news", payload);
+        const res = await axios.post(`${API_URL}/api/news`, payload);
         const newItem = res.data.data || res.data;
         setNews([{ ...newItem, contents: newContents }, ...news]);
       }
@@ -154,6 +154,7 @@ export default function NewsPage() {
   const filteredNews = news.filter((item) =>
     item.title.toLowerCase().includes(query.toLowerCase())
   );
+
   return (
     <div className="flex flex-col gap-6">
       {/* Search + Add */}
@@ -220,7 +221,6 @@ export default function NewsPage() {
                       </p>
                     )}
 
-                    {/* Text preview */}
                     <p className="text-sm text-muted-foreground mt-2 line-clamp-3">
                       {textPreview}
                     </p>
@@ -267,7 +267,6 @@ export default function NewsPage() {
       {open && (
         <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center">
           <div className="bg-background w-[90vw] h-[90vh] max-w-screen max-h-screen rounded-2xl shadow-xl p-6 flex flex-col">
-            {/* Header */}
             <div className="flex justify-between items-center mb-4">
               <h2 className="text-xl font-bold">
                 {editId ? "Мэдээ Засах" : "Мэдээ Нэмэх"}
@@ -286,7 +285,6 @@ export default function NewsPage() {
               </Button>
             </div>
 
-            {/* Content */}
             <div className="flex-1 flex flex-col gap-4 overflow-auto">
               <Input
                 placeholder="Гарчиг"
@@ -303,7 +301,6 @@ export default function NewsPage() {
               />
             </div>
 
-            {/* Footer */}
             <div className="flex justify-end mt-4 gap-2">
               <Button
                 variant="outline"
