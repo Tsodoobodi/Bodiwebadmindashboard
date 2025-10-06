@@ -297,6 +297,7 @@ export default function NewsPage() {
               />
 
               <SimpleEditor
+                key={editId || "new-editor"}
                 content={newContents}
                 onChange={(html: string) => setNewContents(html)}
               />
