@@ -60,13 +60,11 @@ export default function VideoNews() {
   const lastIndex = currentPage * perPage;
   const firstIndex = lastIndex - perPage;
   const currentItems = filtered.slice(firstIndex, lastIndex);
-  const totalPages = Math.ceil(filtered.length / perPage);
 
   function getYoutubeEmbedUrl(url: string): string | null {
     try {
       const parsed = new URL(url);
 
-      // youtube.com/watch?v=xxxx
       if (parsed.hostname.includes("youtube.com")) {
         const videoId = parsed.searchParams.get("v");
         if (videoId) return `https://www.youtube.com/embed/${videoId}`;
@@ -110,7 +108,6 @@ export default function VideoNews() {
           payload
         );
 
-        // Backend-ээс ирсэн өгөгдлийг зөв structure болгож авах
         const updatedItem = res.data?.data ?? res.data;
 
         setNews((prev) => prev.map((n) => (n.id === editId ? updatedItem : n)));
@@ -123,13 +120,11 @@ export default function VideoNews() {
           meta: newMeta,
         });
 
-        // Шууд prepend хийх
         const newItem = res.data?.data ?? res.data;
         setNews((prev) => [newItem, ...prev]);
         setCurrentPage(1);
       }
 
-      // Reset modal
       setModalOpen(false);
       setEditId(null);
       setNewTitle("");

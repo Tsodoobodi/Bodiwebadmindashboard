@@ -2,7 +2,7 @@ import type { Node as TiptapNode } from "@tiptap/pm/model"
 import { NodeSelection, Selection, TextSelection } from "@tiptap/pm/state"
 import type { Editor } from "@tiptap/react"
 
-export const MAX_FILE_SIZE = 5 * 1024 * 1024 // 5MB
+export const MAX_FILE_SIZE = 10 * 1024 * 1024 // 10MB болгосон
 
 export const MAC_SYMBOLS: Record<string, string> = {
   mod: "⌘",
@@ -228,8 +228,6 @@ export function findNodePosition(props: {
     let foundNode: TiptapNode | null = null
 
     editor.state.doc.descendants((currentNode, pos) => {
-      // TODO: Needed?
-      // if (currentNode.type && currentNode.type.name === node!.type.name) {
       if (currentNode === node) {
         foundPos = pos
         foundNode = currentNode
@@ -280,14 +278,11 @@ export function isNodeTypeSelected(
 }
 
 /**
- * Handles image upload with progress tracking and abort capability
- * @param file The file to upload
- * @param onProgress Optional callback for tracking upload progress
- * @param abortSignal Optional AbortSignal for cancelling the upload
- * @returns Promise resolving to the URL of the uploaded image
+ * Compresses an image file to reduce its size
+ * @param file The file to compress
+ * @returns Promise resolving to the compressed file
  */
-// lib/tiptap-utils.ts эсвэл шинэ файл үүсгэ
-export const compressImage = async (file: File, maxSizeMB: number = 5): Promise<File> => {
+export const compressImage = async (file: File): Promise<File> => {
   return new Promise((resolve, reject) => {
     const reader = new FileReader();
     reader.readAsDataURL(file);
@@ -335,7 +330,7 @@ export const compressImage = async (file: File, maxSizeMB: number = 5): Promise<
             }
           },
           'image/jpeg',
-          0.85 // Quality (0-1)
+          0.85
         );
       };
       
@@ -346,12 +341,15 @@ export const compressImage = async (file: File, maxSizeMB: number = 5): Promise<
   });
 };
 
-// handleImageUpload функцийг шинэчлэх
+/**
+ * Handles image upload with automatic compression
+ * @param file The file to upload
+ * @returns Promise resolving to the URL of the uploaded image
+ */
 export const handleImageUpload = async (file: File): Promise<string> => {
-  // Зураг 5MB-аас их бол багасгана
   let uploadFile = file;
-  if (file.size > 5 * 1024 * 1024) {
-    uploadFile = await compressImage(file, 5);
+  if (file.size > MAX_FILE_SIZE) {
+    uploadFile = await compressImage(file);
   }
   
   const formData = new FormData();
@@ -377,19 +375,7 @@ export const handleImageUpload = async (file: File): Promise<string> => {
 };
 
 type ProtocolOptions = {
-  /**
-   * The protocol scheme to be registered.
-   * @default '''
-   * @example 'ftp'
-   * @example 'git'
-   */
   scheme: string
-
-  /**
-   * If enabled, it allows optional slashes after the protocol.
-   * @default false
-   * @example true
-   */
   optionalSlashes?: boolean
 }
 
@@ -430,8 +416,7 @@ export function isAllowedUri(
     !uri ||
     uri.replace(ATTR_WHITESPACE, "").match(
       new RegExp(
-        // eslint-disable-next-line no-useless-escape
-        `^(?:(?:${allowedProtocols.join("|")}):|[^a-z]|[a-z0-9+.\-]+(?:[^a-z+.\-:]|$))`,
+        `^(?:(?:${allowedProtocols.join("|")}):|[^a-z]|[a-z0-9+.\\-]+(?:[^a-z+.\\-:]|$))`,
         "i"
       )
     )

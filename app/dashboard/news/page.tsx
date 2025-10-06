@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import Image from "next/image";
 import React from "react";
 import axios from "axios";
@@ -11,7 +11,7 @@ import { SimpleEditor } from "@/components/tiptap-templates/simple/simple-editor
 interface NewsItem {
   id: string;
   title: string;
-  contents: Record<string, unknown> | string; // JSONB or HTML string
+  contents: Record<string, unknown> | string;
   created_at: string;
   updated_at?: string;
 }
@@ -24,51 +24,56 @@ export default function NewsPage() {
   // Modal state
   const [open, setOpen] = useState(false);
   const [newTitle, setNewTitle] = useState("");
-  const [newContents, setNewContents] = useState<string>(""); // HTML string
+  const [newContents, setNewContents] = useState<string>("");
   const [editId, setEditId] = useState<string | null>(null);
 
   // JSONB -> HTML хөрвүүлэх
   const jsonToHTML = (json: Record<string, unknown>): string => {
-    // Backend format: { type: "doc", content: [{ type: "html", html: "..." }] }
-    if (typeof json === 'object' && json.content && Array.isArray(json.content)) {
+    if (
+      typeof json === "object" &&
+      json.content &&
+      Array.isArray(json.content)
+    ) {
       const htmlNode = json.content.find(
-        (node: Record<string, unknown>) => node.type === 'html' && node.html
+        (node: Record<string, unknown>) => node.type === "html" && node.html
       ) as { html?: string } | undefined;
-      
+
       if (htmlNode?.html) {
         return htmlNode.html;
       }
     }
-    
-    // Fallback: stringify болгоно (хэрэв формат өөр байвал)
-    return typeof json === 'string' ? json : '';
+
+    return typeof json === "string" ? json : "";
   };
 
-  const fetchNews = async () => {
+  // useCallback ашиглаж fetchNews-ийг мemoize хийнэ
+  const fetchNews = useCallback(async () => {
     try {
       setLoading(true);
       const res = await axios.get("http://localhost:5001/api/news");
       const newsData = res.data.data || res.data;
-      
-      // Backend-с JSONB ирэх учир HTML болгож хөрвүүлнэ
+
       const formattedNews = newsData.map((item: NewsItem) => ({
         ...item,
-        contents: typeof item.contents === 'object' 
-          ? jsonToHTML(item.contents as Record<string, unknown>)
-          : item.contents
+        contents:
+          typeof item.contents === "object"
+            ? jsonToHTML(item.contents as Record<string, unknown>)
+            : item.contents,
       }));
-      
+
       setNews(formattedNews);
     } catch (err) {
       console.error("Fetch news error:", err);
     } finally {
       setLoading(false);
     }
-  };
+  }, []); // jsonToHTML нь pure function учир dependency хэрэггүй
 
   useEffect(() => {
     fetchNews();
-  }, []);
+  }, [fetchNews]); // fetchNews-ийг dependency-д нэмсэн
+
+  // ... бусад функцууд өөрчлөлтгүй
 
   const handleDelete = async (id: string) => {
     const confirmed = window.confirm("Та устгахдаа итгэлтэй байна уу?");
@@ -81,9 +86,8 @@ export default function NewsPage() {
     }
   };
 
-  // HTML-с зургийн URL-уудыг гаргах
   const extractImagesFromHTML = (html: string): string[] => {
-    if (typeof html !== 'string') return [];
+    if (typeof html !== "string") return [];
     const regex = /<img[^>]+src=["']([^"']+)["']/g;
     const images: string[] = [];
     let match;
@@ -93,9 +97,8 @@ export default function NewsPage() {
     return images;
   };
 
-  // HTML-с текст гаргах (preview-д харуулах)
   const extractTextFromHTML = (html: string): string => {
-    if (typeof html !== 'string') return '';
+    if (typeof html !== "string") return "";
     return html.replace(/<[^>]+>/g, "").trim();
   };
 
@@ -106,7 +109,6 @@ export default function NewsPage() {
         return;
       }
 
-      // HTML-ийг backend-н JSONB format руу хөрвүүлнэ
       const payload = {
         title: newTitle,
         contents: {
@@ -114,26 +116,26 @@ export default function NewsPage() {
           content: [
             {
               type: "html",
-              html: newContents
-            }
-          ]
-        }
+              html: newContents,
+            },
+          ],
+        },
       };
 
       if (editId) {
-        // Edit mode
         const res = await axios.put(
           `http://localhost:5001/api/news/${editId}`,
           payload
         );
         const updatedItem = res.data.data || res.data;
-        setNews(news.map((item) => 
-          item.id === editId 
-            ? { ...updatedItem, contents: newContents } 
-            : item
-        ));
+        setNews(
+          news.map((item) =>
+            item.id === editId
+              ? { ...updatedItem, contents: newContents }
+              : item
+          )
+        );
       } else {
-        // Add mode
         const res = await axios.post("http://localhost:5001/api/news", payload);
         const newItem = res.data.data || res.data;
         setNews([{ ...newItem, contents: newContents }, ...news]);
@@ -152,7 +154,6 @@ export default function NewsPage() {
   const filteredNews = news.filter((item) =>
     item.title.toLowerCase().includes(query.toLowerCase())
   );
-
   return (
     <div className="flex flex-col gap-6">
       {/* Search + Add */}
@@ -183,9 +184,8 @@ export default function NewsPage() {
       ) : (
         <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
           {filteredNews.map((item) => {
-            const htmlContent = typeof item.contents === 'string' 
-              ? item.contents 
-              : '';
+            const htmlContent =
+              typeof item.contents === "string" ? item.contents : "";
             const images = extractImagesFromHTML(htmlContent);
             const firstImg = images.length > 0 ? images[0] : null;
             const textPreview = extractTextFromHTML(htmlContent);
@@ -236,9 +236,7 @@ export default function NewsPage() {
                         setEditId(item.id);
                         setNewTitle(item.title);
                         setNewContents(
-                          typeof item.contents === 'string' 
-                            ? item.contents 
-                            : ''
+                          typeof item.contents === "string" ? item.contents : ""
                         );
                       }}
                     >
