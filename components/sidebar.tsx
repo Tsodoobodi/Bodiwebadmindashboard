@@ -3,30 +3,35 @@
 import Link from "next/link";
 import { motion, AnimatePresence } from "framer-motion";
 import { usePathname } from "next/navigation";
-import { useState } from "react";
-import { Newspaper } from "lucide-react";
+import { useState, useEffect } from "react";
+import { Newspaper, Video, ChevronDown, ChevronRight, Book, Users } from "lucide-react";
 import Image from "next/image";
 
 const menu = [
   { label: "Мэдээ мэдээлэл", icon: Newspaper, href: "/dashboard/news" },
-  { label: "Видео мэдээ", icon: Newspaper, href: "/dashboard/videonews" },
+  { label: "Видео мэдээ", icon: Video, href: "/dashboard/videonews" },
+  { label: "Bonz", icon: Book },          
+  { label: "RnD", icon: Users },  
 ];
 
-const researchSubMenu = [
-  { label: "Innovation", href: "/dashboard/innovation" },
-  { label: "Event", href: "/dashboard/event" },
+const bonzSubMenu = [
+  { label: "Бүгд", href: "/dashboard/bonz/all" },
+  { label: "Байгаль", href: "/dashboard/bonz/nature" },
+  { label: "Хүн", href: "/dashboard/bonz/person" },
+  { label: "Хөгжил", href: "/dashboard/bonz/development" },
 ];
 
 const rndSubMenu = [
-  { label: "Хамтын ажиллагаа", href: "/dashboard/worktogether/partner" },
-  { label: "Судалгаа хөгжүүлэлт", href: "/dashboard/worktogether/research" },
+  { label: "Танилцуулага", href: "/dashboard/rnd/presentation" },
+  { label: "Хамтын ажиллагаа", href: "/dashboard/rnd/work" },
+  { label: "Судалгаа хөгжүүлэлт", href: "/dashboard/rnd/research" },
 ];
 
 export default function Sidebar() {
   const pathname = usePathname();
   const [openMenus, setOpenMenus] = useState<{ [key: string]: boolean }>({
-    Research: false,
-    "R&D": false,
+    Bonz: false,
+    RnD: false,
   });
 
   const toggleMenu = (menuLabel: string) => {
@@ -36,10 +41,13 @@ export default function Sidebar() {
     }));
   };
 
-  const isResearchActive = researchSubMenu.some((sub) =>
-    pathname.startsWith(sub.href)
-  );
-  const isRndActive = rndSubMenu.some((sub) => pathname.startsWith(sub.href));
+  // Автомат нээх: pathname submenu-д таарч байвал
+  useEffect(() => {
+    setOpenMenus({
+      Bonz: bonzSubMenu.some((sub) => pathname.startsWith(sub.href)),
+      RnD: rndSubMenu.some((sub) => pathname.startsWith(sub.href)),
+    });
+  }, [pathname]);
 
   return (
     <motion.aside
@@ -63,32 +71,66 @@ export default function Sidebar() {
       <nav className="flex flex-col gap-2">
         {menu.map((item) => {
           const Icon = item.icon;
-          const isResearch = item.label === "Research";
-          const isRnd = item.label === "R&D";
-          const activeParent =
-            (isResearch && isResearchActive) || (isRnd && isRndActive);
+          const isBonz = item.label === "Bonz";
+          const isRnd = item.label === "RnD";
 
-          // Sub-menu for accordion
-          const subMenuItems = isResearch
-            ? researchSubMenu
-            : isRnd
-            ? rndSubMenu
-            : [];
+          const subMenuItems = isBonz ? bonzSubMenu : isRnd ? rndSubMenu : [];
+
+          const isOpen = openMenus[item.label];
 
           return (
             <div key={item.label} className="relative">
-              {isResearch || isRnd ? (
-                <div
-                  onClick={() => toggleMenu(item.label)}
-                  className={`flex items-center gap-3 px-4 py-3 rounded-lg cursor-pointer transition-all duration-300 ${
-                    activeParent || openMenus[item.label]
-                      ? "bg-blue-50 text-blue-600 shadow-md"
-                      : "text-gray-700 hover:bg-gray-100 hover:text-blue-600"
-                  }`}
-                >
-                  <Icon size={20} className="text-gray-400" />
-                  <span className="font-medium">{item.label}</span>
-                </div>
+              {isBonz || isRnd ? (
+                <>
+                  <div
+                    onClick={() => toggleMenu(item.label)}
+                    className={`flex items-center justify-between px-4 py-3 rounded-lg cursor-pointer transition-all duration-300 ${
+                      isOpen
+                        ? "bg-blue-50 text-blue-600 shadow-md"
+                        : "text-gray-700 hover:bg-gray-100 hover:text-blue-600"
+                    }`}
+                  >
+                    <div className="flex items-center gap-3">
+                      <Icon size={20} className="text-gray-400" />
+                      <span className="font-medium">{item.label}</span>
+                    </div>
+                    {isOpen ? (
+                      <ChevronDown size={18} className="text-gray-500" />
+                    ) : (
+                      <ChevronRight size={18} className="text-gray-400" />
+                    )}
+                  </div>
+
+                  <AnimatePresence initial={false}>
+                    {isOpen && (
+                      <motion.div
+                        initial={{ height: 0, opacity: 0 }}
+                        animate={{ height: "auto", opacity: 1 }}
+                        exit={{ height: 0, opacity: 0 }}
+                        transition={{ duration: 0.25 }}
+                        className="flex flex-col ml-6 mt-1 gap-1 overflow-hidden"
+                      >
+                        {subMenuItems.map((sub) => {
+                          const activeSub = pathname === sub.href;
+                          return (
+                            <Link key={sub.label} href={sub.href}>
+                              <motion.div
+                                whileHover={{ scale: 1.02 }}
+                                className={`px-4 py-2 rounded-lg cursor-pointer transition-all duration-200 ${
+                                  activeSub
+                                    ? "bg-blue-50 text-blue-600 font-semibold shadow-inner"
+                                    : "text-gray-700 hover:bg-gray-100 hover:text-blue-600"
+                                }`}
+                              >
+                                {sub.label}
+                              </motion.div>
+                            </Link>
+                          );
+                        })}
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
+                </>
               ) : (
                 <Link href={item.href!}>
                   <motion.div
@@ -99,12 +141,6 @@ export default function Sidebar() {
                         : "text-gray-700 hover:bg-gray-100 hover:text-blue-600"
                     }`}
                   >
-                    {pathname.startsWith(item.href!) && (
-                      <motion.div
-                        layoutId="activeIndicator"
-                        className="absolute left-0 top-0 h-full w-1.5 bg-blue-500 rounded-r-full"
-                      />
-                    )}
                     <Icon
                       size={20}
                       className={`transition-colors ${
@@ -124,39 +160,6 @@ export default function Sidebar() {
                     </span>
                   </motion.div>
                 </Link>
-              )}
-
-              {/* Sub-menu */}
-              {(isResearch || isRnd) && (
-                <AnimatePresence initial={false}>
-                  {(openMenus[item.label] || activeParent) && (
-                    <motion.div
-                      initial={{ height: 0, opacity: 0 }}
-                      animate={{ height: "auto", opacity: 1 }}
-                      exit={{ height: 0, opacity: 0 }}
-                      transition={{ duration: 0.25 }}
-                      className="flex flex-col ml-6 mt-1 gap-1 overflow-hidden"
-                    >
-                      {subMenuItems.map((sub) => {
-                        const activeSub = pathname === sub.href;
-                        return (
-                          <Link key={sub.label} href={sub.href}>
-                            <motion.div
-                              whileHover={{ scale: 1.02 }}
-                              className={`px-4 py-2 rounded-lg cursor-pointer transition-all duration-200 ${
-                                activeSub
-                                  ? "bg-blue-50 text-blue-600 font-semibold shadow-inner"
-                                  : "text-gray-700 hover:bg-gray-100 hover:text-blue-600"
-                              }`}
-                            >
-                              {sub.label}
-                            </motion.div>
-                          </Link>
-                        );
-                      })}
-                    </motion.div>
-                  )}
-                </AnimatePresence>
               )}
             </div>
           );
