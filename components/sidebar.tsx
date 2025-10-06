@@ -4,30 +4,11 @@ import Link from "next/link";
 import { motion, AnimatePresence } from "framer-motion";
 import { usePathname } from "next/navigation";
 import { useState } from "react";
-import {
-  Newspaper,
-  Video,
-  FileText,
-  FlaskConical,
-  Lightbulb,
-  Presentation,
-  User,
-  Leaf,
-  Rocket,
-} from "lucide-react";
+import { Newspaper } from "lucide-react";
 import Image from "next/image";
 
 const menu = [
   { label: "Мэдээ мэдээлэл", icon: Newspaper, href: "/dashboard/news" },
-  { label: "Видео мэдээ", icon: Video, href: "/dashboard/videonews" },
-  { label: "Видео контент", icon: FileText, href: "/dashboard/contents" },
-  { label: "R&D Инновац", icon: FlaskConical, href: "/dashboard/innovation" },
-  { label: "R&D", icon: Lightbulb, href: "/dashboard/rnd" },
-  { label: "R&D танилцуулага", icon: Presentation, href: "/dashboard/presentation" },
-  { label: "Бонз байгаль", icon: Leaf, href: "/dashboard/nature" },
-  { label: "Бонз хүн", icon: User, href: "/dashboard/person" },
-  { label: "Бонз хөгжил", icon: Rocket, href: "/dashboard/development" },
-  { label: "test", icon: Rocket, href: "/dashboard/test" },
 ];
 
 const researchSubMenu = [
@@ -54,7 +35,9 @@ export default function Sidebar() {
     }));
   };
 
-  const isResearchActive = researchSubMenu.some((sub) => pathname.startsWith(sub.href));
+  const isResearchActive = researchSubMenu.some((sub) =>
+    pathname.startsWith(sub.href)
+  );
   const isRndActive = rndSubMenu.some((sub) => pathname.startsWith(sub.href));
 
   return (
@@ -81,10 +64,15 @@ export default function Sidebar() {
           const Icon = item.icon;
           const isResearch = item.label === "Research";
           const isRnd = item.label === "R&D";
-          const activeParent = (isResearch && isResearchActive) || (isRnd && isRndActive);
+          const activeParent =
+            (isResearch && isResearchActive) || (isRnd && isRndActive);
 
           // Sub-menu for accordion
-          const subMenuItems = isResearch ? researchSubMenu : isRnd ? rndSubMenu : [];
+          const subMenuItems = isResearch
+            ? researchSubMenu
+            : isRnd
+            ? rndSubMenu
+            : [];
 
           return (
             <div key={item.label} className="relative">
