@@ -2,10 +2,10 @@
 import type { NextConfig } from 'next';
 
 const config: NextConfig = {
-  // Static Export for Azure Static Web Apps
+  // ⭐ Static Export идэвхжүүлэх (ЧУХАЛ!)
   output: 'export',
   
-  // Disable image optimization for static export
+  // ⭐ Image optimization идэвхгүй болгох (static export-д шаардлагатай)
   images: {
     unoptimized: true,
     remotePatterns: [
@@ -34,7 +34,7 @@ const config: NextConfig = {
     NEXT_PUBLIC_API_URL: process.env.NEXT_PUBLIC_API_URL,
   },
   
-  // Trailing slash for better static hosting
+  // Trailing slash for static hosting
   trailingSlash: true,
 };
 
