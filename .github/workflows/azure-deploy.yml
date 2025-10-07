@@ -40,22 +40,33 @@ jobs:
         NEXT_PUBLIC_API_URL: ${{ secrets.NEXT_PUBLIC_API_URL }}
         NODE_ENV: production
     
-    # ↓↓↓ ЭНД ШИНЭ DEBUG ХЭСЭГ НЭМЭГДЭЖ БАЙНА ↓↓↓
     - name: 🔍 Verify build output
       run: |
-        echo "Checking out/ folder..."
-        ls -la out/ || echo "❌ out/ folder not found!"
-        
-        if [ -f "out/index.html" ]; then
-          echo "✅ index.html found!"
-          echo "File size: $(stat -f%z out/index.html 2>/dev/null || stat -c%s out/index.html) bytes"
-        else
-          echo "❌ index.html NOT found!"
+        echo "Checking build output..."
+        echo "Current directory:"
+        pwd
+        echo ""
+        echo "Root directory contents:"
+        ls -la
+        echo ""
+        echo "Checking for out/ folder:"
+        if [ -d "out" ]; then
+          echo "✅ out/ folder exists"
           echo "Contents of out/:"
-          ls -laR out/ || echo "out/ folder is empty or doesn't exist"
+          ls -la out/
+          echo ""
+          if [ -f "out/index.html" ]; then
+            echo "✅ out/index.html found!"
+            echo "File size: $(stat -f%z out/index.html 2>/dev/null || stat -c%s out/index.html) bytes"
+          else
+            echo "❌ out/index.html NOT found!"
+            exit 1
+          fi
+        else
+          echo "❌ out/ folder does NOT exist!"
+          echo "Build may have failed or next.config.ts missing 'output: export'"
           exit 1
         fi
-    # ↑↑↑ DEBUG ХЭСЭГ ДУУСЛАА ↑↑↑
     
     - name: 🚀 Deploy to Azure Static Web Apps
       id: builddeploy
@@ -65,7 +76,7 @@ jobs:
         repo_token: ${{ secrets.GITHUB_TOKEN }}
         action: "upload"
         app_location: "/"
-        output_location: "out"
+        app_artifact_location: "out"    # ← ЧУХАЛ: out folder байгааг зааж өгөх
         skip_app_build: true
     
     - name: ✅ Deployment Summary
