@@ -55,7 +55,7 @@
     "@tailwindcss/postcss": "^4.1.13",
     "@types/lodash.throttle": "^4.1.9",
     "@types/multer": "^2.0.0",
-    "@types/node": "^20",
+    "@types/node": "^20.19.19",
     "@types/nodemailer": "^7.0.1",
     "@types/react": "^19",
     "@types/react-dom": "^19",
