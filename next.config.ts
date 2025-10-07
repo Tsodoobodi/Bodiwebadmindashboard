@@ -2,24 +2,26 @@
 import type { NextConfig } from 'next';
 
 const config: NextConfig = {
-  // ⭐ Static Export идэвхжүүлэх (ЧУХАЛ!)
+  // ⭐⭐⭐ STATIC EXPORT - ЧУХАЛ! ⭐⭐⭐
   output: 'export',
   
-  // ⭐ Image optimization идэвхгүй болгох (static export-д шаардлагатай)
+  // Image optimization идэвхгүй болгох
   images: {
     unoptimized: true,
     remotePatterns: [
+      // Production backend
       {
         protocol: 'https',
         hostname: 'bodi-backend-api.azurewebsites.net',
         pathname: '/uploads/**',
       },
+      // YouTube thumbnails
       {
         protocol: 'https',
         hostname: 'img.youtube.com',
         pathname: '/vi/**',
       },
-      // Development
+      // Development backend
       {
         protocol: 'http',
         hostname: 'localhost',
@@ -31,10 +33,10 @@ const config: NextConfig = {
   
   // Environment variables
   env: {
-    NEXT_PUBLIC_API_URL: process.env.NEXT_PUBLIC_API_URL,
+    NEXT_PUBLIC_API_URL: process.env.NEXT_PUBLIC_API_URL || 'https://bodi-backend-api.azurewebsites.net',
   },
   
-  // Trailing slash for static hosting
+  // Trailing slash
   trailingSlash: true,
 };
 
