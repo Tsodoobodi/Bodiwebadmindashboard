@@ -3,7 +3,8 @@
 import { useEffect, useState, useCallback } from "react";
 import Image from "next/image";
 import React from "react";
-import axios from "axios";
+import axios, { AxiosError } from "axios"; // ⬅️ AxiosError нэмсэн
+import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { SimpleEditor } from "@/components/tiptap-templates/simple/simple-editor";
@@ -29,17 +30,14 @@ interface NewsItems {
   updated_at?: string;
 }
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:5001";
+const API_URL = process.env.NEXT_PUBLIC_API_URL || "https://bodi-backend-api.azurewebsites.net";
 
 export default function NewsPage() {
+  const router = useRouter();
   const [rndpartner, setRndpartner] = useState<NewsItems[]>([]);
   const [query, setQuery] = useState("");
-  const [statusFilter, setStatusFilter] = useState<
-    "all" | "active" | "inactive"
-  >("all");
-  const [updatedDateFilter, setUpdatedDateFilter] = useState<Date | undefined>(
-    undefined
-  );
+  const [statusFilter, setStatusFilter] = useState<"all" | "active" | "inactive">("all");
+  const [updatedDateFilter, setUpdatedDateFilter] = useState<Date | undefined>(undefined);
   const [loading, setLoading] = useState(false);
   const [open, setOpen] = useState(false);
   const [newTitle, setNewTitle] = useState("");
@@ -50,12 +48,33 @@ export default function NewsPage() {
   const [editId, setEditId] = useState<string | null>(null);
   const [updatedDate, setUpdatedDate] = useState<Date | undefined>(undefined);
 
+  // ✅ Token авах helper function
+  const getAuthHeaders = () => {
+    const token = localStorage.getItem("token");
+    if (!token) {
+      alert("Нэвтрэх шаардлагатай!");
+      router.push("/login");
+      throw new Error("No token");
+    }
+    return {
+      headers: {
+        "Content-Type": "application/json",
+        "Authorization": `Bearer ${token}`
+      }
+    };
+  };
+
+  // ✅ 401 error handler - AxiosError type ашигласан
+  const handleAuthError = (error: AxiosError | Error) => {
+    if (axios.isAxiosError(error) && error.response?.status === 401) {
+      alert("Token хүчингүй байна. Дахин нэвтэрнэ үү!");
+      localStorage.removeItem("token");
+      router.push("/login");
+    }
+  };
+
   const jsonToHTML = (json: Record<string, unknown>): string => {
-    if (
-      typeof json === "object" &&
-      json.content &&
-      Array.isArray(json.content)
-    ) {
+    if (typeof json === "object" && json.content && Array.isArray(json.content)) {
       const htmlNode = json.content.find(
         (node: Record<string, unknown>) => node.type === "html" && node.html
       ) as { html?: string } | undefined;
@@ -67,7 +86,7 @@ export default function NewsPage() {
   const fetchRndpartner = useCallback(async () => {
     try {
       setLoading(true);
-      const res = await axios.get(`${API_URL}/api/news`);
+      const res = await axios.get(`${API_URL}/api/news`, getAuthHeaders());
       const rndpartnerData = res.data.data || res.data;
       const formattedRndpartner = rndpartnerData.map((item: NewsItems) => ({
         ...item,
@@ -79,6 +98,7 @@ export default function NewsPage() {
       setRndpartner(formattedRndpartner);
     } catch (err) {
       console.error("Fetch news error:", err);
+      handleAuthError(err as AxiosError);
     } finally {
       setLoading(false);
     }
@@ -92,10 +112,11 @@ export default function NewsPage() {
     const confirmed = window.confirm("Та устгахдаа итгэлтэй байна уу?");
     if (!confirmed) return;
     try {
-      await axios.delete(`${API_URL}/api/news/${id}`);
+      await axios.delete(`${API_URL}/api/news/${id}`, getAuthHeaders());
       setRndpartner(rndpartner.filter((item) => item.id !== id));
     } catch (err) {
       console.error("Delete error:", err);
+      handleAuthError(err as AxiosError);
     }
   };
 
@@ -144,17 +165,15 @@ export default function NewsPage() {
       };
 
       if (editId) {
-        const res = await axios.put(`${API_URL}/api/news/${editId}`, payload);
+        const res = await axios.put(`${API_URL}/api/news/${editId}`, payload, getAuthHeaders());
         const updatedItem = res.data.data || res.data;
         setRndpartner(
           rndpartner.map((item) =>
-            item.id === editId
-              ? { ...updatedItem, contents: newContents }
-              : item
+            item.id === editId ? { ...updatedItem, contents: newContents } : item
           )
         );
       } else {
-        const res = await axios.post(`${API_URL}/api/news`, payload);
+        const res = await axios.post(`${API_URL}/api/news`, payload, getAuthHeaders());
         const newItem = res.data.data || res.data;
         setRndpartner([{ ...newItem, contents: newContents }, ...rndpartner]);
       }
@@ -169,11 +188,11 @@ export default function NewsPage() {
       setEditId(null);
     } catch (err) {
       console.error("Save error:", err);
+      handleAuthError(err as AxiosError);
       alert("Алдаа гарлаа. Console-г шалгана уу.");
     }
   };
 
-  // Filter by title, status, and updated date
   const filteredRndpartner = rndpartner.filter((item) => {
     const matchesTitle = item.title.toLowerCase().includes(query.toLowerCase());
     const matchesStatus =
@@ -183,8 +202,7 @@ export default function NewsPage() {
         ? item.status === true
         : item.status === false;
     const matchesDate = updatedDateFilter
-      ? new Date(item.updated_at ?? item.created_at).toDateString() ===
-        updatedDateFilter.toDateString()
+      ? new Date(item.updated_at ?? item.created_at).toDateString() === updatedDateFilter.toDateString()
       : true;
     return matchesTitle && matchesStatus && matchesDate;
   });
@@ -202,9 +220,7 @@ export default function NewsPage() {
         />
         <select
           value={statusFilter}
-          onChange={(e) =>
-            setStatusFilter(e.target.value as "all" | "active" | "inactive")
-          }
+          onChange={(e) => setStatusFilter(e.target.value as "all" | "active" | "inactive")}
           className="px-4 py-2 rounded-lg border bg-white text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-400 transition"
         >
           <option value="all">Бүгд</option>
@@ -212,13 +228,10 @@ export default function NewsPage() {
           <option value="inactive">Идэвхгүй</option>
         </select>
 
-        {/* Updated Date Filter */}
         <Popover>
           <PopoverTrigger asChild>
             <Button variant="outline" className="w-[250px] justify-between">
-              {updatedDateFilter
-                ? updatedDateFilter.toLocaleDateString()
-                : "Огноогоор шүүх"}
+              {updatedDateFilter ? updatedDateFilter.toLocaleDateString() : "Огноогоор шүүх"}
               <Calendar className="ml-2 h-4 w-4" />
             </Button>
           </PopoverTrigger>
@@ -254,8 +267,7 @@ export default function NewsPage() {
       ) : (
         <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
           {filteredRndpartner.map((item) => {
-            const htmlContent =
-              typeof item.contents === "string" ? item.contents : "";
+            const htmlContent = typeof item.contents === "string" ? item.contents : "";
             const images = extractImagesFromHTML(htmlContent);
             const firstImg = images.length > 0 ? images[0] : null;
             const textPreview = extractTextFromHTML(htmlContent);
@@ -278,46 +290,33 @@ export default function NewsPage() {
                 <div className="p-4 flex-1 flex flex-col justify-between">
                   <div>
                     <div className="flex items-center gap-2 mb-2">
-                      <h3 className="font-semibold truncate flex-1">
-                        {item.title}
-                      </h3>
+                      <h3 className="font-semibold truncate flex-1">{item.title}</h3>
                       {item.position && (
-                        <span className="text-xs bg-yellow-400 text-white px-2 py-1 rounded">
-                          ⭐
-                        </span>
+                        <span className="text-xs bg-yellow-400 text-white px-2 py-1 rounded">⭐</span>
                       )}
                       {item.is_research && (
-                        <span className="text-xs bg-blue-400 text-white px-2 py-1 rounded">
-                          🔬
-                        </span>
+                        <span className="text-xs bg-blue-400 text-white px-2 py-1 rounded">🔬</span>
                       )}
                     </div>
                     <div className="flex items-center gap-2 mb-2">
                       <span
                         className={`text-xs px-2 py-1 rounded ${
-                          item.status
-                            ? "bg-green-400 text-white"
-                            : "bg-gray-400 text-white"
+                          item.status ? "bg-green-400 text-white" : "bg-gray-400 text-white"
                         }`}
                       >
                         {item.status ? "Идэвхтэй" : "Идэвхгүй"}
                       </span>
-                      <span className="text-xs text-gray-500">
-                        👁 {item.viewers}
-                      </span>
+                      <span className="text-xs text-gray-500">👁 {item.viewers}</span>
                     </div>
                     <p className="text-xs text-gray-400 mb-2">
                       Үүсгэсэн: {new Date(item.created_at).toLocaleDateString()}
                     </p>
                     {item.updated_at && (
                       <p className="text-xs text-blue-400 mb-2">
-                        Шинэчилсэн:{" "}
-                        {new Date(item.updated_at).toLocaleDateString()}
+                        Шинэчилсэн: {new Date(item.updated_at).toLocaleDateString()}
                       </p>
                     )}
-                    <p className="text-sm text-gray-600 line-clamp-3">
-                      {textPreview}
-                    </p>
+                    <p className="text-sm text-gray-600 line-clamp-3">{textPreview}</p>
                   </div>
 
                   <div className="mt-4 flex gap-2">
@@ -329,17 +328,11 @@ export default function NewsPage() {
                         setOpen(true);
                         setEditId(item.id);
                         setNewTitle(item.title);
-                        setNewContents(
-                          typeof item.contents === "string" ? item.contents : ""
-                        );
+                        setNewContents(typeof item.contents === "string" ? item.contents : "");
                         setNewStatus(item.status);
                         setNewPosition(item.position);
                         setNewIsResearch(item.is_research);
-                        setUpdatedDate(
-                          item.updated_at
-                            ? new Date(item.updated_at)
-                            : new Date()
-                        );
+                        setUpdatedDate(item.updated_at ? new Date(item.updated_at) : new Date());
                       }}
                     >
                       Засах
@@ -358,9 +351,7 @@ export default function NewsPage() {
             );
           })}
           {filteredRndpartner.length === 0 && (
-            <p className="col-span-full text-center text-gray-400">
-              Мэдээ олдсонгүй.
-            </p>
+            <p className="col-span-full text-center text-gray-400">Мэдээ олдсонгүй.</p>
           )}
         </div>
       )}
@@ -398,9 +389,7 @@ export default function NewsPage() {
                   <Checkbox
                     id="status"
                     checked={newStatus}
-                    onCheckedChange={(checked) =>
-                      setNewStatus(checked as boolean)
-                    }
+                    onCheckedChange={(checked) => setNewStatus(checked as boolean)}
                   />
                   <Label htmlFor="status">Идэвхтэй</Label>
                 </div>
@@ -408,9 +397,7 @@ export default function NewsPage() {
                   <Checkbox
                     id="position"
                     checked={newPosition}
-                    onCheckedChange={(checked) =>
-                      setNewPosition(checked as boolean)
-                    }
+                    onCheckedChange={(checked) => setNewPosition(checked as boolean)}
                   />
                   <Label htmlFor="position">Онцолсон</Label>
                 </div>
@@ -418,9 +405,7 @@ export default function NewsPage() {
                   <Checkbox
                     id="is_research"
                     checked={newIsResearch}
-                    onCheckedChange={(checked) =>
-                      setNewIsResearch(checked as boolean)
-                    }
+                    onCheckedChange={(checked) => setNewIsResearch(checked as boolean)}
                   />
                   <Label htmlFor="is_research">Судалгаа руу нэмэх</Label>
                 </div>
@@ -430,13 +415,8 @@ export default function NewsPage() {
                 <Label>Шинэчилсэн огноо сонгох:</Label>
                 <Popover>
                   <PopoverTrigger asChild>
-                    <Button
-                      variant="outline"
-                      className="w-[250px] justify-between"
-                    >
-                      {updatedDate
-                        ? updatedDate.toLocaleDateString()
-                        : "Огноо сонгох"}
+                    <Button variant="outline" className="w-[250px] justify-between">
+                      {updatedDate ? updatedDate.toLocaleDateString() : "Огноо сонгох"}
                       <Calendar className="ml-2 h-4 w-4" />
                     </Button>
                   </PopoverTrigger>
@@ -461,9 +441,7 @@ export default function NewsPage() {
               <Button variant="outline" onClick={() => setOpen(false)}>
                 Болих
               </Button>
-              <Button onClick={handleSave}>
-                {editId ? "Шинэчлэх" : "Нэмэх"}
-              </Button>
+              <Button onClick={handleSave}>{editId ? "Шинэчлэх" : "Нэмэх"}</Button>
             </div>
           </div>
         </div>

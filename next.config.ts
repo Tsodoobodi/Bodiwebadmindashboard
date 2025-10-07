@@ -22,12 +22,12 @@ const config: NextConfig = {
         pathname: '/vi/**',
       },
       // Development backend
-      {
-        protocol: 'http',
-        hostname: 'localhost',
-        port: '5001',
-        pathname: '/uploads/**',
-      },
+      // {
+      //   protocol: 'http',
+      //   hostname: 'localhost',
+      //   port: '5001',
+      //   pathname: '/uploads/**',
+      // },
     ],
   },
   

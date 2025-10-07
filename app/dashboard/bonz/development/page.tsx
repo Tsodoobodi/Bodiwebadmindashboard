@@ -16,7 +16,7 @@ interface DevelopmentItem {
   updated_at?: string;
 }
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:5001";
+const API_URL = process.env.NEXT_PUBLIC_API_URL || "https://bodi-backend-api.azurewebsites.net";
 
 export default function DevelopmentPage() {
   const [development, setDevelopment] = useState<DevelopmentItem[]>([]);

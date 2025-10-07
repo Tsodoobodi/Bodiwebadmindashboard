@@ -3,7 +3,7 @@ import { NodeSelection, Selection, TextSelection } from "@tiptap/pm/state"
 import type { Editor } from "@tiptap/react"
 
 export const MAX_FILE_SIZE = 10 * 1024 * 1024 // 10MB
-const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:5001";
+const API_URL = process.env.NEXT_PUBLIC_API_URL || "https://bodi-backend-api.azurewebsites.net";
 
 export const MAC_SYMBOLS: Record<string, string> = {
   mod: "⌘",

@@ -14,7 +14,7 @@ interface NewsItem {
   category: "development" | "nature" | "news";
 }
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:5001";
+const API_URL = process.env.NEXT_PUBLIC_API_URL || "https://bodi-backend-api.azurewebsites.net";
 
 export default function AllNewsPage() {
   const [allNews, setAllNews] = useState<NewsItem[]>([]);

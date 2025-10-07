@@ -14,7 +14,7 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { Eye, EyeOff, User, Lock} from "lucide-react";
+import { Eye, EyeOff, User, Lock } from "lucide-react";
 import Link from "next/link";
 import Image from "next/image";
 
@@ -32,13 +32,16 @@ export default function LoginForm() {
     setError("");
 
     try {
-      const response = await fetch("http://localhost:5001/api/login", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({ username, password }),
-      });
+      const response = await fetch(
+        "https://bodi-backend-api.azurewebsites.net/api/login",
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({ username, password }),
+        }
+      );
 
       if (response.ok) {
         const data = await response.json();
@@ -48,11 +51,14 @@ export default function LoginForm() {
         localStorage.setItem("token", data.token);
 
         // ✅ Token хадгалсны дараа хамгаалалттай API дуудаж тест хийх
-        const check = await fetch("http://localhost:5001/api/protected", {
-          headers: {
-            "Authorization": `Bearer ${data.token}`,
-          },
-        });
+        const check = await fetch(
+          "https://bodi-backend-api.azurewebsites.net/api/protected",
+          {
+            headers: {
+              Authorization: `Bearer ${data.token}`,
+            },
+          }
+        );
 
         if (check.ok) {
           console.log("Protected API success:", await check.json());
@@ -140,7 +146,11 @@ export default function LoginForm() {
                 onClick={() => setShowPassword(!showPassword)}
                 className="absolute right-4 top-1/2 -translate-y-1/2"
               >
-                {showPassword ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
+                {showPassword ? (
+                  <EyeOff className="h-5 w-5" />
+                ) : (
+                  <Eye className="h-5 w-5" />
+                )}
               </button>
             </div>
           </div>
