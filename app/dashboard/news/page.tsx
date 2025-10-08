@@ -29,7 +29,9 @@ interface NewsItems {
   updated_at?: string;
 }
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL || "https://bodi-backend-api.azurewebsites.net";
+const API_URL =
+  process.env.NEXT_PUBLIC_API_URL ||
+  "https://bodi-backend-api.azurewebsites.net";
 
 export default function ResearchPage() {
   const [research, setResearch] = useState<NewsItems[]>([]);
@@ -52,7 +54,11 @@ export default function ResearchPage() {
   const [dateSort, setDateSort] = useState<string>("newest");
 
   const jsonToHTML = (json: Record<string, unknown>): string => {
-    if (typeof json === "object" && json.content && Array.isArray(json.content)) {
+    if (
+      typeof json === "object" &&
+      json.content &&
+      Array.isArray(json.content)
+    ) {
       const htmlNode = json.content.find(
         (node: Record<string, unknown>) => node.type === "html" && node.html
       ) as { html?: string } | undefined;
@@ -68,9 +74,10 @@ export default function ResearchPage() {
       const researchData = res.data.data || res.data;
       const formattedResearch = researchData.map((item: NewsItems) => ({
         ...item,
-        contents: typeof item.contents === "object" 
-          ? jsonToHTML(item.contents as Record<string, unknown>)
-          : item.contents,
+        contents:
+          typeof item.contents === "object"
+            ? jsonToHTML(item.contents as Record<string, unknown>)
+            : item.contents,
       }));
       setResearch(formattedResearch);
     } catch (err) {
@@ -134,7 +141,9 @@ export default function ResearchPage() {
         const updatedItem = res.data.data || res.data;
         setResearch(
           research.map((item) =>
-            item.id === editId ? { ...updatedItem, contents: newContents } : item
+            item.id === editId
+              ? { ...updatedItem, contents: newContents }
+              : item
           )
         );
       } else {
@@ -178,7 +187,7 @@ export default function ResearchPage() {
     const sorted = [...filtered].sort((a, b) => {
       const dateA = new Date(a.created_at).getTime();
       const dateB = new Date(b.created_at).getTime();
-      
+
       if (dateSort === "newest") {
         return dateB - dateA; // Шинээс хуучин руу
       } else {
@@ -259,13 +268,15 @@ export default function ResearchPage() {
 
         {/* Results count */}
         <p className="text-sm text-muted-foreground">
-          Нийт {filteredResearch.length} мэдээ олдлоо
+          Нийт ( {filteredResearch.length} ) мэдээ олдлоо
         </p>
       </div>
 
       {/* Content */}
       {loading ? (
-        <p className="text-center text-muted-foreground py-12">Уншиж байна ...</p>
+        <p className="text-center text-muted-foreground py-12">
+          Уншиж байна ...
+        </p>
       ) : currentItems.length === 0 ? (
         <p className="text-center text-muted-foreground py-12">
           Мэдээ олдсонгүй.
@@ -275,7 +286,8 @@ export default function ResearchPage() {
           {/* Grid */}
           <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
             {currentItems.map((item) => {
-              const htmlContent = typeof item.contents === "string" ? item.contents : "";
+              const htmlContent =
+                typeof item.contents === "string" ? item.contents : "";
               const images = extractImagesFromHTML(htmlContent);
               const firstImg = images.length > 0 ? images[0] : null;
               const textPreview = extractTextFromHTML(htmlContent);
@@ -298,19 +310,33 @@ export default function ResearchPage() {
                   <div className="p-4 flex-1 flex flex-col justify-between">
                     <div>
                       <div className="flex items-center gap-2 mb-2">
-                        <h3 className="font-semibold truncate flex-1">{item.title}</h3>
+                        <h3 className="font-semibold truncate flex-1">
+                          {item.title}
+                        </h3>
                         {item.position && (
-                          <span className="text-xs bg-yellow-500 text-white px-2 py-1 rounded">⭐</span>
+                          <span className="text-xs bg-yellow-500 text-white px-2 py-1 rounded">
+                            ⭐
+                          </span>
                         )}
                         {item.is_research && (
-                          <span className="text-xs bg-blue-500 text-white px-2 py-1 rounded">🔬</span>
+                          <span className="text-xs bg-blue-500 text-white px-2 py-1 rounded">
+                            🔬
+                          </span>
                         )}
                       </div>
-                      <div className="flex items-center gap-2 mb-2">
-                        <span className={`text-xs px-2 py-1 rounded ${item.status ? 'bg-green-500 text-white' : 'bg-gray-500 text-white'}`}>
-                          {item.status ? 'Идэвхтэй' : 'Идэвхгүй'}
+                      <div className="flex items-center justify-between gap-2 mb-2">
+                        <span
+                          className={`text-xs px-2 py-1 rounded ${
+                            item.status
+                              ? "bg-green-500 text-white"
+                              : "bg-gray-500 text-white"
+                          }`}
+                        >
+                          {item.status ? "Идэвхтэй" : "Идэвхгүй"}
                         </span>
-                        <span className="text-xs text-muted-foreground">👁 {item.viewers}</span>
+                        <span className="text-xs text-muted-foreground">
+                        мэдээний үзэлт 👁 {item.viewers}
+                        </span>
                       </div>
                       <p className="text-xs text-muted-foreground mb-2">
                         {new Date(item.created_at).toLocaleDateString()}
@@ -329,7 +355,11 @@ export default function ResearchPage() {
                           setOpen(true);
                           setEditId(item.id);
                           setNewTitle(item.title);
-                          setNewContents(typeof item.contents === "string" ? item.contents : "");
+                          setNewContents(
+                            typeof item.contents === "string"
+                              ? item.contents
+                              : ""
+                          );
                           setNewStatus(item.status);
                           setNewPosition(item.position);
                           setNewIsResearch(item.is_research);
@@ -365,29 +395,38 @@ export default function ResearchPage() {
               </Button>
 
               <div className="flex gap-1">
-                {Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => {
-                  // Show first page, last page, current page, and pages around current
-                  if (
-                    page === 1 ||
-                    page === totalPages ||
-                    (page >= currentPage - 1 && page <= currentPage + 1)
-                  ) {
-                    return (
-                      <Button
-                        key={page}
-                        variant={currentPage === page ? "default" : "outline"}
-                        size="sm"
-                        onClick={() => goToPage(page)}
-                        className="w-10"
-                      >
-                        {page}
-                      </Button>
-                    );
-                  } else if (page === currentPage - 2 || page === currentPage + 2) {
-                    return <span key={page} className="px-2">...</span>;
+                {Array.from({ length: totalPages }, (_, i) => i + 1).map(
+                  (page) => {
+                    // Show first page, last page, current page, and pages around current
+                    if (
+                      page === 1 ||
+                      page === totalPages ||
+                      (page >= currentPage - 1 && page <= currentPage + 1)
+                    ) {
+                      return (
+                        <Button
+                          key={page}
+                          variant={currentPage === page ? "default" : "outline"}
+                          size="sm"
+                          onClick={() => goToPage(page)}
+                          className="w-10"
+                        >
+                          {page}
+                        </Button>
+                      );
+                    } else if (
+                      page === currentPage - 2 ||
+                      page === currentPage + 2
+                    ) {
+                      return (
+                        <span key={page} className="px-2">
+                          ...
+                        </span>
+                      );
+                    }
+                    return null;
                   }
-                  return null;
-                })}
+                )}
               </div>
 
               <Button
@@ -437,16 +476,22 @@ export default function ResearchPage() {
                   <Checkbox
                     id="status"
                     checked={newStatus}
-                    onCheckedChange={(checked) => setNewStatus(checked as boolean)}
+                    onCheckedChange={(checked) =>
+                      setNewStatus(checked as boolean)
+                    }
                   />
-                  <Label htmlFor="status">Идэвхтэй</Label>
+                  <Label htmlFor="status" className="text-sm">
+                    {newStatus ? "Мэдээг нийтлэхгүй" : "Мэдээг нийтлэх"}
+                  </Label>
                 </div>
 
                 <div className="flex items-center space-x-2">
                   <Checkbox
                     id="position"
                     checked={newPosition}
-                    onCheckedChange={(checked) => setNewPosition(checked as boolean)}
+                    onCheckedChange={(checked) =>
+                      setNewPosition(checked as boolean)
+                    }
                   />
                   <Label htmlFor="position">Онцолсон</Label>
                 </div>
