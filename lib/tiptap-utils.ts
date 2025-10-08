@@ -353,27 +353,54 @@ export const handleImageUpload = async (file: File): Promise<string> => {
   }
   
   const formData = new FormData();
-  formData.append('image', uploadFile);
+  formData.append('file', uploadFile); // ⬅️ 'file' үлдээнэ
 
   try {
+    const token = localStorage.getItem('token');
+    
+    console.log('🚀 Uploading to:', `${API_URL}/api/images/upload`);
+    console.log('📦 FormData field name:', 'file'); // ⬅️ DEBUG
+    
     const response = await fetch(`${API_URL}/api/images/upload`, {
       method: 'POST',
+      headers: token ? {
+        'Authorization': `Bearer ${token}`,
+      } : {},
       body: formData,
     });
 
-    const data = await response.json();
+    console.log('📊 Response status:', response.status);
+    
+    // ⬇️ JSON parse error шалгах
+    const text = await response.text();
+    console.log('📄 Response text:', text.substring(0, 200)); // First 200 chars
+    
+    let data;
+    try {
+      data = JSON.parse(text);
+    } catch (e) {
+      console.error('❌ Failed to parse JSON:', e);
+      console.error('Response was:', text);
+      throw new Error('Server returned invalid JSON');
+    }
+    
+    console.log('📦 Response data:', data);
     
     if (data.success && data.url) {
-      return data.url;
+      const imageUrl = data.url.startsWith('http') 
+        ? data.url 
+        : `${API_URL}${data.url}`;
+      
+      console.log('✅ Image URL:', imageUrl);
+      return imageUrl;
     }
     
     throw new Error(data.message || 'Upload failed');
   } catch (error) {
-    console.error('Image upload error:', error);
+    console.error('❌ Image upload error:', error);
     throw error;
   }
 };
-
 type ProtocolOptions = {
   scheme: string
   optionalSlashes?: boolean
