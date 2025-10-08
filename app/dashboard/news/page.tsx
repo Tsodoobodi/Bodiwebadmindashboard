@@ -3,20 +3,12 @@
 import { useEffect, useState, useCallback } from "react";
 import Image from "next/image";
 import React from "react";
-import axios, { AxiosError } from "axios"; // ⬅️ AxiosError нэмсэн
-import { useRouter } from "next/navigation";
+import axios from "axios";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { SimpleEditor } from "@/components/tiptap-templates/simple/simple-editor";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
-import { Calendar } from "lucide-react";
-import {
-  Popover,
-  PopoverTrigger,
-  PopoverContent,
-} from "@/components/ui/popover";
-import { Calendar as ShadcnCalendar } from "@/components/ui/calendar";
 
 interface NewsItems {
   id: string;
@@ -32,46 +24,17 @@ interface NewsItems {
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || "https://bodi-backend-api.azurewebsites.net";
 
-export default function NewsPage() {
-  const router = useRouter();
-  const [rndpartner, setRndpartner] = useState<NewsItems[]>([]);
+export default function ResearchPage() {
+  const [research, setResearch] = useState<NewsItems[]>([]);
   const [query, setQuery] = useState("");
-  const [statusFilter, setStatusFilter] = useState<"all" | "active" | "inactive">("all");
-  const [updatedDateFilter, setUpdatedDateFilter] = useState<Date | undefined>(undefined);
   const [loading, setLoading] = useState(false);
   const [open, setOpen] = useState(false);
   const [newTitle, setNewTitle] = useState("");
   const [newContents, setNewContents] = useState<string>("");
   const [newStatus, setNewStatus] = useState(true);
   const [newPosition, setNewPosition] = useState(false);
-  const [newIsResearch, setNewIsResearch] = useState(false);
+  const [newIsResearch, setNewIsResearch] = useState(true);
   const [editId, setEditId] = useState<string | null>(null);
-  const [updatedDate, setUpdatedDate] = useState<Date | undefined>(undefined);
-
-  // ✅ Token авах helper function
-  const getAuthHeaders = () => {
-    const token = localStorage.getItem("token");
-    if (!token) {
-      alert("Нэвтрэх шаардлагатай!");
-      router.push("/login");
-      throw new Error("No token");
-    }
-    return {
-      headers: {
-        "Content-Type": "application/json",
-        "Authorization": `Bearer ${token}`
-      }
-    };
-  };
-
-  // ✅ 401 error handler - AxiosError type ашигласан
-  const handleAuthError = (error: AxiosError | Error) => {
-    if (axios.isAxiosError(error) && error.response?.status === 401) {
-      alert("Token хүчингүй байна. Дахин нэвтэрнэ үү!");
-      localStorage.removeItem("token");
-      router.push("/login");
-    }
-  };
 
   const jsonToHTML = (json: Record<string, unknown>): string => {
     if (typeof json === "object" && json.content && Array.isArray(json.content)) {
@@ -83,40 +46,37 @@ export default function NewsPage() {
     return typeof json === "string" ? json : "";
   };
 
-  const fetchRndpartner = useCallback(async () => {
+  const fetchResearch = useCallback(async () => {
     try {
       setLoading(true);
-      const res = await axios.get(`${API_URL}/api/news`, getAuthHeaders());
-      const rndpartnerData = res.data.data || res.data;
-      const formattedRndpartner = rndpartnerData.map((item: NewsItems) => ({
+      const res = await axios.get(`${API_URL}/api/news`);
+      const researchData = res.data.data || res.data;
+      const formattedResearch = researchData.map((item: NewsItems) => ({
         ...item,
-        contents:
-          typeof item.contents === "object"
-            ? jsonToHTML(item.contents as Record<string, unknown>)
-            : item.contents,
+        contents: typeof item.contents === "object" 
+          ? jsonToHTML(item.contents as Record<string, unknown>)
+          : item.contents,
       }));
-      setRndpartner(formattedRndpartner);
+      setResearch(formattedResearch);
     } catch (err) {
-      console.error("Fetch news error:", err);
-      handleAuthError(err as AxiosError);
+      console.error("Fetch research error:", err);
     } finally {
       setLoading(false);
     }
   }, []);
 
   useEffect(() => {
-    fetchRndpartner();
-  }, [fetchRndpartner]);
+    fetchResearch();
+  }, [fetchResearch]);
 
   const handleDelete = async (id: string) => {
     const confirmed = window.confirm("Та устгахдаа итгэлтэй байна уу?");
     if (!confirmed) return;
     try {
-      await axios.delete(`${API_URL}/api/news/${id}`, getAuthHeaders());
-      setRndpartner(rndpartner.filter((item) => item.id !== id));
+      await axios.delete(`${API_URL}/api/news/${id}`);
+      setResearch(research.filter((item) => item.id !== id));
     } catch (err) {
       console.error("Delete error:", err);
-      handleAuthError(err as AxiosError);
     }
   };
 
@@ -143,16 +103,7 @@ export default function NewsPage() {
         return;
       }
 
-      interface Payload {
-        title: string;
-        contents: { type: "doc"; content: { type: "html"; html: string }[] };
-        status: boolean;
-        position: boolean;
-        is_research: boolean;
-        updated_at?: string;
-      }
-
-      const payload: Payload = {
+      const payload = {
         title: newTitle,
         contents: {
           type: "doc",
@@ -161,21 +112,20 @@ export default function NewsPage() {
         status: newStatus,
         position: newPosition,
         is_research: newIsResearch,
-        updated_at: updatedDate?.toISOString(),
       };
 
       if (editId) {
-        const res = await axios.put(`${API_URL}/api/news/${editId}`, payload, getAuthHeaders());
+        const res = await axios.put(`${API_URL}/api/news/${editId}`, payload);
         const updatedItem = res.data.data || res.data;
-        setRndpartner(
-          rndpartner.map((item) =>
+        setResearch(
+          research.map((item) =>
             item.id === editId ? { ...updatedItem, contents: newContents } : item
           )
         );
       } else {
-        const res = await axios.post(`${API_URL}/api/news`, payload, getAuthHeaders());
+        const res = await axios.post(`${API_URL}/api/news`, payload);
         const newItem = res.data.data || res.data;
-        setRndpartner([{ ...newItem, contents: newContents }, ...rndpartner]);
+        setResearch([{ ...newItem, contents: newContents }, ...research]);
       }
 
       setOpen(false);
@@ -183,69 +133,30 @@ export default function NewsPage() {
       setNewContents("");
       setNewStatus(true);
       setNewPosition(false);
-      setNewIsResearch(false);
-      setUpdatedDate(undefined);
+      setNewIsResearch(true);
       setEditId(null);
     } catch (err) {
       console.error("Save error:", err);
-      handleAuthError(err as AxiosError);
       alert("Алдаа гарлаа. Console-г шалгана уу.");
     }
   };
 
-  const filteredRndpartner = rndpartner.filter((item) => {
-    const matchesTitle = item.title.toLowerCase().includes(query.toLowerCase());
-    const matchesStatus =
-      statusFilter === "all"
-        ? true
-        : statusFilter === "active"
-        ? item.status === true
-        : item.status === false;
-    const matchesDate = updatedDateFilter
-      ? new Date(item.updated_at ?? item.created_at).toDateString() === updatedDateFilter.toDateString()
-      : true;
-    return matchesTitle && matchesStatus && matchesDate;
-  });
+  const filteredResearch = research.filter((item) =>
+    item.title.toLowerCase().includes(query.toLowerCase())
+  );
 
   return (
     <div className="flex flex-col gap-6">
-      {/* Search + Filter + Date + Add */}
-      <div className="flex flex-wrap gap-4 items-center mb-6">
-        <Input
+      <div className="flex gap-8 items-center mb-4">
+        <input
           type="text"
           placeholder="Мэдээ хайх ..."
           value={query}
           onChange={(e) => setQuery(e.target.value)}
-          className="flex-1 min-w-[200px] border-gray-300 focus:border-blue-400 focus:ring-blue-200 rounded-lg shadow-sm"
+          className="w-[500px] p-2 rounded-xl border bg-background/50 text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-blue-500 transition"
         />
-        <select
-          value={statusFilter}
-          onChange={(e) => setStatusFilter(e.target.value as "all" | "active" | "inactive")}
-          className="px-4 py-2 rounded-lg border bg-white text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-400 transition"
-        >
-          <option value="all">Бүгд</option>
-          <option value="active">Идэвхтэй</option>
-          <option value="inactive">Идэвхгүй</option>
-        </select>
-
-        <Popover>
-          <PopoverTrigger asChild>
-            <Button variant="outline" className="w-[250px] justify-between">
-              {updatedDateFilter ? updatedDateFilter.toLocaleDateString() : "Огноогоор шүүх"}
-              <Calendar className="ml-2 h-4 w-4" />
-            </Button>
-          </PopoverTrigger>
-          <PopoverContent className="w-auto p-0">
-            <ShadcnCalendar
-              mode="single"
-              selected={updatedDateFilter}
-              onSelect={(date) => setUpdatedDateFilter(date ?? undefined)}
-            />
-          </PopoverContent>
-        </Popover>
-
         <Button
-          className="ml-auto bg-gradient-to-r from-blue-500 to-blue-600 text-white rounded-xl h-10 px-6 shadow-lg hover:scale-105 transition-transform duration-200"
+          className="bg-none rounded-xl w-[200px] h-10 text-md border border-gray-500 hover:bg-gray-500 hover:text-white transition-all duration-300 ease-in-out cursor-pointer"
           onClick={() => {
             setOpen(true);
             setEditId(null);
@@ -253,20 +164,18 @@ export default function NewsPage() {
             setNewContents("");
             setNewStatus(true);
             setNewPosition(false);
-            setNewIsResearch(false);
-            setUpdatedDate(new Date());
+            setNewIsResearch(true);
           }}
         >
-          + Шинэ мэдээ
+          + Шинэ мэдээ нэмэх
         </Button>
       </div>
 
-      {/* Grid */}
       {loading ? (
-        <p className="text-center text-gray-400">Уншиж байна ...</p>
+        <p className="text-center text-muted-foreground">Уншиж байна ...</p>
       ) : (
         <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
-          {filteredRndpartner.map((item) => {
+          {filteredResearch.map((item) => {
             const htmlContent = typeof item.contents === "string" ? item.contents : "";
             const images = extractImagesFromHTML(htmlContent);
             const firstImg = images.length > 0 ? images[0] : null;
@@ -275,7 +184,7 @@ export default function NewsPage() {
             return (
               <div
                 key={item.id}
-                className="bg-white rounded-2xl shadow-md overflow-hidden cursor-pointer flex flex-col transition-all duration-300 hover:scale-[1.02] hover:shadow-xl h-[400px]"
+                className="bg-card rounded-2xl shadow-md overflow-hidden cursor-pointer flex flex-col transition-all duration-300 ease-in-out hover:scale-100 hover:shadow-xl h-[400px]"
               >
                 {firstImg && (
                   <Image
@@ -292,31 +201,24 @@ export default function NewsPage() {
                     <div className="flex items-center gap-2 mb-2">
                       <h3 className="font-semibold truncate flex-1">{item.title}</h3>
                       {item.position && (
-                        <span className="text-xs bg-yellow-400 text-white px-2 py-1 rounded">⭐</span>
+                        <span className="text-xs bg-yellow-500 text-white px-2 py-1 rounded">⭐</span>
                       )}
                       {item.is_research && (
-                        <span className="text-xs bg-blue-400 text-white px-2 py-1 rounded">🔬</span>
+                        <span className="text-xs bg-blue-500 text-white px-2 py-1 rounded">🔬</span>
                       )}
                     </div>
                     <div className="flex items-center gap-2 mb-2">
-                      <span
-                        className={`text-xs px-2 py-1 rounded ${
-                          item.status ? "bg-green-400 text-white" : "bg-gray-400 text-white"
-                        }`}
-                      >
-                        {item.status ? "Идэвхтэй" : "Идэвхгүй"}
+                      <span className={`text-xs px-2 py-1 rounded ${item.status ? 'bg-green-500 text-white' : 'bg-gray-500 text-white'}`}>
+                        {item.status ? 'Идэвхтэй' : 'Идэвхгүй'}
                       </span>
-                      <span className="text-xs text-gray-500">👁 {item.viewers}</span>
+                      <span className="text-xs text-muted-foreground">👁 {item.viewers}</span>
                     </div>
-                    <p className="text-xs text-gray-400 mb-2">
-                      Үүсгэсэн: {new Date(item.created_at).toLocaleDateString()}
+                    <p className="text-xs text-muted-foreground mb-2">
+                      {new Date(item.created_at).toLocaleDateString()}
                     </p>
-                    {item.updated_at && (
-                      <p className="text-xs text-blue-400 mb-2">
-                        Шинэчилсэн: {new Date(item.updated_at).toLocaleDateString()}
-                      </p>
-                    )}
-                    <p className="text-sm text-gray-600 line-clamp-3">{textPreview}</p>
+                    <p className="text-sm text-muted-foreground line-clamp-3">
+                      {textPreview}
+                    </p>
                   </div>
 
                   <div className="mt-4 flex gap-2">
@@ -332,7 +234,6 @@ export default function NewsPage() {
                         setNewStatus(item.status);
                         setNewPosition(item.position);
                         setNewIsResearch(item.is_research);
-                        setUpdatedDate(item.updated_at ? new Date(item.updated_at) : new Date());
                       }}
                     >
                       Засах
@@ -350,19 +251,20 @@ export default function NewsPage() {
               </div>
             );
           })}
-          {filteredRndpartner.length === 0 && (
-            <p className="col-span-full text-center text-gray-400">Мэдээ олдсонгүй.</p>
+          {filteredResearch.length === 0 && (
+            <p className="col-span-full text-center text-muted-foreground">
+              Мэдээ олдсонгүй.
+            </p>
           )}
         </div>
       )}
 
-      {/* Add/Edit Modal */}
       {open && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm">
-          <div className="bg-white w-[90vw] h-[90vh] max-w-screen max-h-screen rounded-3xl shadow-2xl p-6 flex flex-col transition-transform duration-300 scale-100">
+        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center">
+          <div className="bg-background w-[90vw] h-[90vh] max-w-screen max-h-screen rounded-2xl shadow-xl p-6 flex flex-col">
             <div className="flex justify-between items-center mb-4">
               <h2 className="text-xl font-bold">
-                {editId ? "RnDPartner Засах" : "RnDPartner Нэмэх"}
+                {editId ? "Мэдээ засах" : "Мэдээ нэмэх"}
               </h2>
               <Button
                 variant="outline"
@@ -380,8 +282,9 @@ export default function NewsPage() {
               <Input
                 placeholder="Гарчиг"
                 value={newTitle}
-                onChange={(e) => setNewTitle(e.target.value)}
-                className="border-gray-300 rounded-lg shadow-sm"
+                onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
+                  setNewTitle(e.target.value)
+                }
               />
 
               <div className="flex gap-6">
@@ -393,6 +296,7 @@ export default function NewsPage() {
                   />
                   <Label htmlFor="status">Идэвхтэй</Label>
                 </div>
+
                 <div className="flex items-center space-x-2">
                   <Checkbox
                     id="position"
@@ -401,33 +305,6 @@ export default function NewsPage() {
                   />
                   <Label htmlFor="position">Онцолсон</Label>
                 </div>
-                <div className="flex items-center space-x-2">
-                  <Checkbox
-                    id="is_research"
-                    checked={newIsResearch}
-                    onCheckedChange={(checked) => setNewIsResearch(checked as boolean)}
-                  />
-                  <Label htmlFor="is_research">Судалгаа руу нэмэх</Label>
-                </div>
-              </div>
-
-              <div className="flex flex-col gap-2">
-                <Label>Шинэчилсэн огноо сонгох:</Label>
-                <Popover>
-                  <PopoverTrigger asChild>
-                    <Button variant="outline" className="w-[250px] justify-between">
-                      {updatedDate ? updatedDate.toLocaleDateString() : "Огноо сонгох"}
-                      <Calendar className="ml-2 h-4 w-4" />
-                    </Button>
-                  </PopoverTrigger>
-                  <PopoverContent className="w-auto p-0">
-                    <ShadcnCalendar
-                      mode="single"
-                      selected={updatedDate}
-                      onSelect={(date) => setUpdatedDate(date ?? new Date())}
-                    />
-                  </PopoverContent>
-                </Popover>
               </div>
 
               <SimpleEditor
@@ -441,7 +318,9 @@ export default function NewsPage() {
               <Button variant="outline" onClick={() => setOpen(false)}>
                 Болих
               </Button>
-              <Button onClick={handleSave}>{editId ? "Шинэчлэх" : "Нэмэх"}</Button>
+              <Button onClick={handleSave}>
+                {editId ? "Шинэчлэх" : "Нэмэх"}
+              </Button>
             </div>
           </div>
         </div>

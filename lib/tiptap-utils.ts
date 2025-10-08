@@ -283,7 +283,8 @@ export function isNodeTypeSelected(
  * @param file The file to compress
  * @returns Promise resolving to the compressed file
  */
-export const compressImage = async (file: File): Promise<File> => {
+// lib/tiptap-utils.ts эсвэл шинэ файл үүсгэ
+export const compressImage = async (file: File, maxSizeMB: number = 5): Promise<File> => {
   return new Promise((resolve, reject) => {
     const reader = new FileReader();
     reader.readAsDataURL(file);
@@ -297,6 +298,7 @@ export const compressImage = async (file: File): Promise<File> => {
         let width = img.width;
         let height = img.height;
         
+        // Том зураг бол жижигрүүлнэ
         const MAX_WIDTH = 1920;
         const MAX_HEIGHT = 1080;
         
@@ -330,7 +332,7 @@ export const compressImage = async (file: File): Promise<File> => {
             }
           },
           'image/jpeg',
-          0.85
+          0.85 // Quality (0-1)
         );
       };
       
@@ -341,63 +343,32 @@ export const compressImage = async (file: File): Promise<File> => {
   });
 };
 
-/**
- * Handles image upload with automatic compression
- * @param file The file to upload
- * @returns Promise resolving to the URL of the uploaded image
- */
+// handleImageUpload функцийг шинэчлэх
 export const handleImageUpload = async (file: File): Promise<string> => {
+  // Зураг 5MB-аас их бол багасгана
   let uploadFile = file;
-  if (file.size > MAX_FILE_SIZE) {
-    uploadFile = await compressImage(file);
+  if (file.size > 5 * 1024 * 1024) {
+    uploadFile = await compressImage(file, 5);
   }
   
   const formData = new FormData();
-  formData.append('file', uploadFile); // ⬅️ 'file' үлдээнэ
+  formData.append('image', uploadFile);
 
   try {
-    const token = localStorage.getItem('token');
-    
-    console.log('🚀 Uploading to:', `${API_URL}/api/images/upload`);
-    console.log('📦 FormData field name:', 'file'); // ⬅️ DEBUG
-    
-    const response = await fetch(`${API_URL}/api/images/upload`, {
+    const response = await fetch('https://bodi-backend-api.azurewebsites.net/api/uploads', {
       method: 'POST',
-      headers: token ? {
-        'Authorization': `Bearer ${token}`,
-      } : {},
       body: formData,
     });
 
-    console.log('📊 Response status:', response.status);
-    
-    // ⬇️ JSON parse error шалгах
-    const text = await response.text();
-    console.log('📄 Response text:', text.substring(0, 200)); // First 200 chars
-    
-    let data;
-    try {
-      data = JSON.parse(text);
-    } catch (e) {
-      console.error('❌ Failed to parse JSON:', e);
-      console.error('Response was:', text);
-      throw new Error('Server returned invalid JSON');
-    }
-    
-    console.log('📦 Response data:', data);
+    const data = await response.json();
     
     if (data.success && data.url) {
-      const imageUrl = data.url.startsWith('http') 
-        ? data.url 
-        : `${API_URL}${data.url}`;
-      
-      console.log('✅ Image URL:', imageUrl);
-      return imageUrl;
+      return data.url;
     }
     
     throw new Error(data.message || 'Upload failed');
   } catch (error) {
-    console.error('❌ Image upload error:', error);
+    console.error('Image upload error:', error);
     throw error;
   }
 };

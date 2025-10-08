@@ -221,7 +221,7 @@ export function SimpleEditor({ content, onChange }: SimpleEditorProps) {
       Selection,
       ImageUploadNode.configure({
         accept: "image/*",
-        maxSize: MAX_FILE_SIZE,
+        maxSize: 10 * 1024 * 1024, // 10MB
         limit: 0,
         upload: handleImageUpload,
         onError: (error) => console.error("Upload failed:", error),
