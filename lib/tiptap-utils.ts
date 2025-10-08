@@ -2,8 +2,7 @@ import type { Node as TiptapNode } from "@tiptap/pm/model"
 import { NodeSelection, Selection, TextSelection } from "@tiptap/pm/state"
 import type { Editor } from "@tiptap/react"
 
-export const MAX_FILE_SIZE = 10 * 1024 * 1024 // 10MB
-const API_URL = process.env.NEXT_PUBLIC_API_URL || "https://bodi-backend-api.azurewebsites.net";
+export const MAX_FILE_SIZE = 10 * 1024 * 1024 
 
 export const MAC_SYMBOLS: Record<string, string> = {
   mod: "⌘",
@@ -344,6 +343,8 @@ export const compressImage = async (file: File, maxSizeMB: number = 5): Promise<
 };
 
 // handleImageUpload функцийг шинэчлэх
+// lib/tiptap-utils.ts
+
 export const handleImageUpload = async (file: File): Promise<string> => {
   // Зураг 5MB-аас их бол багасгана
   let uploadFile = file;
@@ -355,13 +356,15 @@ export const handleImageUpload = async (file: File): Promise<string> => {
   formData.append('image', uploadFile);
 
   try {
-    const response = await fetch('https://bodi-backend-api.azurewebsites.net/api/uploads', {
+    // ✅ URL ӨӨРЧЛӨХ - /api/uploads → /api/images/upload
+    const response = await fetch('https://bodi-backend-api.azurewebsites.net/api/images/upload', {
       method: 'POST',
       body: formData,
     });
 
     const data = await response.json();
     
+    // ✅ Response format засах
     if (data.success && data.url) {
       return data.url;
     }
