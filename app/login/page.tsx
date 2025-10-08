@@ -15,7 +15,6 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Eye, EyeOff, User, Lock } from "lucide-react";
-import Link from "next/link";
 import Image from "next/image";
 
 export default function LoginForm() {
@@ -160,15 +159,6 @@ export default function LoginForm() {
           <Button type="submit" className="w-full h-12" disabled={isLoading}>
             {isLoading ? "Signing in..." : "Sign In"}
           </Button>
-
-          <div className="text-center">
-            <p className="text-muted-foreground text-base">
-              Don`t have an account?{" "}
-              <Link href="/signup" className="text-primary hover:underline">
-                Sign up
-              </Link>
-            </p>
-          </div>
         </CardFooter>
       </form>
     </Card>

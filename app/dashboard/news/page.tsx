@@ -9,6 +9,13 @@ import { Input } from "@/components/ui/input";
 import { SimpleEditor } from "@/components/tiptap-templates/simple/simple-editor";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 
 interface NewsItems {
   id: string;
@@ -35,6 +42,14 @@ export default function ResearchPage() {
   const [newPosition, setNewPosition] = useState(false);
   const [newIsResearch, setNewIsResearch] = useState(true);
   const [editId, setEditId] = useState<string | null>(null);
+
+  // Pagination states
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 9;
+
+  // Filter states
+  const [statusFilter, setStatusFilter] = useState<string>("all");
+  const [dateSort, setDateSort] = useState<string>("newest");
 
   const jsonToHTML = (json: Record<string, unknown>): string => {
     if (typeof json === "object" && json.content && Array.isArray(json.content)) {
@@ -141,124 +156,254 @@ export default function ResearchPage() {
     }
   };
 
-  const filteredResearch = research.filter((item) =>
-    item.title.toLowerCase().includes(query.toLowerCase())
-  );
+  // Filter and sort logic
+  const getFilteredAndSortedResearch = () => {
+    let filtered = research;
+
+    // Text search filter
+    if (query) {
+      filtered = filtered.filter((item) =>
+        item.title.toLowerCase().includes(query.toLowerCase())
+      );
+    }
+
+    // Status filter
+    if (statusFilter === "active") {
+      filtered = filtered.filter((item) => item.status === true);
+    } else if (statusFilter === "inactive") {
+      filtered = filtered.filter((item) => item.status === false);
+    }
+
+    // Date sort
+    const sorted = [...filtered].sort((a, b) => {
+      const dateA = new Date(a.created_at).getTime();
+      const dateB = new Date(b.created_at).getTime();
+      
+      if (dateSort === "newest") {
+        return dateB - dateA; // Шинээс хуучин руу
+      } else {
+        return dateA - dateB; // Хуучнаас шинэ рүү
+      }
+    });
+
+    return sorted;
+  };
+
+  const filteredResearch = getFilteredAndSortedResearch();
+
+  // Pagination logic
+  const totalPages = Math.ceil(filteredResearch.length / itemsPerPage);
+  const startIndex = (currentPage - 1) * itemsPerPage;
+  const endIndex = startIndex + itemsPerPage;
+  const currentItems = filteredResearch.slice(startIndex, endIndex);
+
+  // Reset to page 1 when filters change
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [query, statusFilter, dateSort]);
+
+  const goToPage = (page: number) => {
+    setCurrentPage(page);
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  };
 
   return (
     <div className="flex flex-col gap-6">
-      <div className="flex gap-8 items-center mb-4">
-        <input
-          type="text"
-          placeholder="Мэдээ хайх ..."
-          value={query}
-          onChange={(e) => setQuery(e.target.value)}
-          className="w-[500px] p-2 rounded-xl border bg-background/50 text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-blue-500 transition"
-        />
-        <Button
-          className="bg-none rounded-xl w-[200px] h-10 text-md border border-gray-500 hover:bg-gray-500 hover:text-white transition-all duration-300 ease-in-out cursor-pointer"
-          onClick={() => {
-            setOpen(true);
-            setEditId(null);
-            setNewTitle("");
-            setNewContents("");
-            setNewStatus(true);
-            setNewPosition(false);
-            setNewIsResearch(true);
-          }}
-        >
-          + Шинэ мэдээ нэмэх
-        </Button>
+      {/* Search and Filters */}
+      <div className="flex flex-col gap-4">
+        <div className="flex gap-4 items-center flex-wrap">
+          <Input
+            type="text"
+            placeholder="Мэдээ хайх ..."
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+            className="w-full md:w-[400px]"
+          />
+
+          <Select value={statusFilter} onValueChange={setStatusFilter}>
+            <SelectTrigger className="w-full md:w-[180px]">
+              <SelectValue placeholder="Төлөв сонгох" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">Бүгд</SelectItem>
+              <SelectItem value="active">Идэвхтэй</SelectItem>
+              <SelectItem value="inactive">Идэвхгүй</SelectItem>
+            </SelectContent>
+          </Select>
+
+          <Select value={dateSort} onValueChange={setDateSort}>
+            <SelectTrigger className="w-full md:w-[180px]">
+              <SelectValue placeholder="Эрэмбэлэх" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="newest">Шинээс хуучин</SelectItem>
+              <SelectItem value="oldest">Хуучнаас шинэ</SelectItem>
+            </SelectContent>
+          </Select>
+
+          <Button
+            className="bg-none rounded-xl w-full md:w-[200px] h-10 border border-gray-500 hover:bg-gray-500 hover:text-white transition-all"
+            onClick={() => {
+              setOpen(true);
+              setEditId(null);
+              setNewTitle("");
+              setNewContents("");
+              setNewStatus(true);
+              setNewPosition(false);
+              setNewIsResearch(true);
+            }}
+          >
+            + Шинэ мэдээ нэмэх
+          </Button>
+        </div>
+
+        {/* Results count */}
+        <p className="text-sm text-muted-foreground">
+          Нийт {filteredResearch.length} мэдээ олдлоо
+        </p>
       </div>
 
+      {/* Content */}
       {loading ? (
-        <p className="text-center text-muted-foreground">Уншиж байна ...</p>
+        <p className="text-center text-muted-foreground py-12">Уншиж байна ...</p>
+      ) : currentItems.length === 0 ? (
+        <p className="text-center text-muted-foreground py-12">
+          Мэдээ олдсонгүй.
+        </p>
       ) : (
-        <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
-          {filteredResearch.map((item) => {
-            const htmlContent = typeof item.contents === "string" ? item.contents : "";
-            const images = extractImagesFromHTML(htmlContent);
-            const firstImg = images.length > 0 ? images[0] : null;
-            const textPreview = extractTextFromHTML(htmlContent);
+        <>
+          {/* Grid */}
+          <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+            {currentItems.map((item) => {
+              const htmlContent = typeof item.contents === "string" ? item.contents : "";
+              const images = extractImagesFromHTML(htmlContent);
+              const firstImg = images.length > 0 ? images[0] : null;
+              const textPreview = extractTextFromHTML(htmlContent);
 
-            return (
-              <div
-                key={item.id}
-                className="bg-card rounded-2xl shadow-md overflow-hidden cursor-pointer flex flex-col transition-all duration-300 ease-in-out hover:scale-100 hover:shadow-xl h-[400px]"
-              >
-                {firstImg && (
-                  <Image
-                    width={200}
-                    height={150}
-                    src={firstImg}
-                    alt={item.title}
-                    className="w-full h-40 object-cover"
-                  />
-                )}
+              return (
+                <div
+                  key={item.id}
+                  className="bg-card rounded-2xl shadow-md overflow-hidden cursor-pointer flex flex-col transition-all duration-300 ease-in-out hover:scale-100 hover:shadow-xl h-[400px]"
+                >
+                  {firstImg && (
+                    <Image
+                      width={200}
+                      height={150}
+                      src={firstImg}
+                      alt={item.title}
+                      className="w-full h-40 object-cover"
+                    />
+                  )}
 
-                <div className="p-4 flex-1 flex flex-col justify-between">
-                  <div>
-                    <div className="flex items-center gap-2 mb-2">
-                      <h3 className="font-semibold truncate flex-1">{item.title}</h3>
-                      {item.position && (
-                        <span className="text-xs bg-yellow-500 text-white px-2 py-1 rounded">⭐</span>
-                      )}
-                      {item.is_research && (
-                        <span className="text-xs bg-blue-500 text-white px-2 py-1 rounded">🔬</span>
-                      )}
+                  <div className="p-4 flex-1 flex flex-col justify-between">
+                    <div>
+                      <div className="flex items-center gap-2 mb-2">
+                        <h3 className="font-semibold truncate flex-1">{item.title}</h3>
+                        {item.position && (
+                          <span className="text-xs bg-yellow-500 text-white px-2 py-1 rounded">⭐</span>
+                        )}
+                        {item.is_research && (
+                          <span className="text-xs bg-blue-500 text-white px-2 py-1 rounded">🔬</span>
+                        )}
+                      </div>
+                      <div className="flex items-center gap-2 mb-2">
+                        <span className={`text-xs px-2 py-1 rounded ${item.status ? 'bg-green-500 text-white' : 'bg-gray-500 text-white'}`}>
+                          {item.status ? 'Идэвхтэй' : 'Идэвхгүй'}
+                        </span>
+                        <span className="text-xs text-muted-foreground">👁 {item.viewers}</span>
+                      </div>
+                      <p className="text-xs text-muted-foreground mb-2">
+                        {new Date(item.created_at).toLocaleDateString()}
+                      </p>
+                      <p className="text-sm text-muted-foreground line-clamp-3">
+                        {textPreview}
+                      </p>
                     </div>
-                    <div className="flex items-center gap-2 mb-2">
-                      <span className={`text-xs px-2 py-1 rounded ${item.status ? 'bg-green-500 text-white' : 'bg-gray-500 text-white'}`}>
-                        {item.status ? 'Идэвхтэй' : 'Идэвхгүй'}
-                      </span>
-                      <span className="text-xs text-muted-foreground">👁 {item.viewers}</span>
-                    </div>
-                    <p className="text-xs text-muted-foreground mb-2">
-                      {new Date(item.created_at).toLocaleDateString()}
-                    </p>
-                    <p className="text-sm text-muted-foreground line-clamp-3">
-                      {textPreview}
-                    </p>
-                  </div>
 
-                  <div className="mt-4 flex gap-2">
-                    <Button
-                      className="cursor-pointer"
-                      size="sm"
-                      variant="outline"
-                      onClick={() => {
-                        setOpen(true);
-                        setEditId(item.id);
-                        setNewTitle(item.title);
-                        setNewContents(typeof item.contents === "string" ? item.contents : "");
-                        setNewStatus(item.status);
-                        setNewPosition(item.position);
-                        setNewIsResearch(item.is_research);
-                      }}
-                    >
-                      Засах
-                    </Button>
-                    <Button
-                      className="cursor-pointer"
-                      size="sm"
-                      variant="destructive"
-                      onClick={() => handleDelete(item.id)}
-                    >
-                      Устгах
-                    </Button>
+                    <div className="mt-4 flex gap-2">
+                      <Button
+                        className="cursor-pointer"
+                        size="sm"
+                        variant="outline"
+                        onClick={() => {
+                          setOpen(true);
+                          setEditId(item.id);
+                          setNewTitle(item.title);
+                          setNewContents(typeof item.contents === "string" ? item.contents : "");
+                          setNewStatus(item.status);
+                          setNewPosition(item.position);
+                          setNewIsResearch(item.is_research);
+                        }}
+                      >
+                        Засах
+                      </Button>
+                      <Button
+                        className="cursor-pointer"
+                        size="sm"
+                        variant="destructive"
+                        onClick={() => handleDelete(item.id)}
+                      >
+                        Устгах
+                      </Button>
+                    </div>
                   </div>
                 </div>
+              );
+            })}
+          </div>
+
+          {/* Pagination */}
+          {totalPages > 1 && (
+            <div className="flex justify-center items-center gap-2 mt-8">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => goToPage(currentPage - 1)}
+                disabled={currentPage === 1}
+              >
+                Өмнөх
+              </Button>
+
+              <div className="flex gap-1">
+                {Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => {
+                  // Show first page, last page, current page, and pages around current
+                  if (
+                    page === 1 ||
+                    page === totalPages ||
+                    (page >= currentPage - 1 && page <= currentPage + 1)
+                  ) {
+                    return (
+                      <Button
+                        key={page}
+                        variant={currentPage === page ? "default" : "outline"}
+                        size="sm"
+                        onClick={() => goToPage(page)}
+                        className="w-10"
+                      >
+                        {page}
+                      </Button>
+                    );
+                  } else if (page === currentPage - 2 || page === currentPage + 2) {
+                    return <span key={page} className="px-2">...</span>;
+                  }
+                  return null;
+                })}
               </div>
-            );
-          })}
-          {filteredResearch.length === 0 && (
-            <p className="col-span-full text-center text-muted-foreground">
-              Мэдээ олдсонгүй.
-            </p>
+
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => goToPage(currentPage + 1)}
+                disabled={currentPage === totalPages}
+              >
+                Дараах
+              </Button>
+            </div>
           )}
-        </div>
+        </>
       )}
 
+      {/* Modal */}
       {open && (
         <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center">
           <div className="bg-background w-[90vw] h-[90vh] max-w-screen max-h-screen rounded-2xl shadow-xl p-6 flex flex-col">
