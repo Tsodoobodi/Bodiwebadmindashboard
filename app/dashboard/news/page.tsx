@@ -43,6 +43,7 @@ export default function ResearchPage() {
   const [newStatus, setNewStatus] = useState(true);
   const [newPosition, setNewPosition] = useState(false);
   const [newIsResearch, setNewIsResearch] = useState(true);
+  const [newCreatedAt, setNewCreatedAt] = useState<string>(""); // ← ШИНЭ
   const [editId, setEditId] = useState<string | null>(null);
 
   // Pagination states
@@ -118,6 +119,16 @@ export default function ResearchPage() {
     return html.replace(/<[^>]+>/g, "").trim();
   };
 
+  // Format date for input (YYYY-MM-DD)
+  const formatDateForInput = (dateString: string): string => {
+    try {
+      const date = new Date(dateString);
+      return date.toISOString().split('T')[0];
+    } catch {
+      return new Date().toISOString().split('T')[0];
+    }
+  };
+
   const handleSave = async () => {
     try {
       if (!newTitle || !newContents) {
@@ -125,7 +136,19 @@ export default function ResearchPage() {
         return;
       }
 
-      const payload = {
+      interface UpdatePayload {
+        title: string;
+        contents: {
+          type: string;
+          content: Array<{ type: string; html: string }>;
+        };
+        status: boolean;
+        position: boolean;
+        is_research: boolean;
+        created_at?: string;
+      }
+
+      const payload: UpdatePayload = {
         title: newTitle,
         contents: {
           type: "doc",
@@ -135,6 +158,11 @@ export default function ResearchPage() {
         position: newPosition,
         is_research: newIsResearch,
       };
+
+      // ✅ Огноо өөрчилсөн бол payload-д нэмэх
+      if (editId && newCreatedAt) {
+        payload.created_at = new Date(newCreatedAt).toISOString();
+      }
 
       if (editId) {
         const res = await axios.put(`${API_URL}/api/news/${editId}`, payload);
@@ -158,6 +186,7 @@ export default function ResearchPage() {
       setNewStatus(true);
       setNewPosition(false);
       setNewIsResearch(true);
+      setNewCreatedAt("");
       setEditId(null);
     } catch (err) {
       console.error("Save error:", err);
@@ -169,29 +198,26 @@ export default function ResearchPage() {
   const getFilteredAndSortedResearch = () => {
     let filtered = research;
 
-    // Text search filter
     if (query) {
       filtered = filtered.filter((item) =>
         item.title.toLowerCase().includes(query.toLowerCase())
       );
     }
 
-    // Status filter
     if (statusFilter === "active") {
       filtered = filtered.filter((item) => item.status === true);
     } else if (statusFilter === "inactive") {
       filtered = filtered.filter((item) => item.status === false);
     }
 
-    // Date sort
     const sorted = [...filtered].sort((a, b) => {
       const dateA = new Date(a.created_at).getTime();
       const dateB = new Date(b.created_at).getTime();
 
       if (dateSort === "newest") {
-        return dateB - dateA; // Шинээс хуучин руу
+        return dateB - dateA;
       } else {
-        return dateA - dateB; // Хуучнаас шинэ рүү
+        return dateA - dateB;
       }
     });
 
@@ -206,7 +232,6 @@ export default function ResearchPage() {
   const endIndex = startIndex + itemsPerPage;
   const currentItems = filteredResearch.slice(startIndex, endIndex);
 
-  // Reset to page 1 when filters change
   useEffect(() => {
     setCurrentPage(1);
   }, [query, statusFilter, dateSort]);
@@ -260,13 +285,13 @@ export default function ResearchPage() {
               setNewStatus(true);
               setNewPosition(false);
               setNewIsResearch(true);
+              setNewCreatedAt("");
             }}
           >
             + Шинэ мэдээ нэмэх
           </Button>
         </div>
 
-        {/* Results count */}
         <p className="text-sm text-muted-foreground">
           Нийт ( {filteredResearch.length} ) мэдээ олдлоо
         </p>
@@ -335,12 +360,17 @@ export default function ResearchPage() {
                           {item.status ? "Идэвхтэй" : "Идэвхгүй"}
                         </span>
                         <span className="text-xs text-muted-foreground">
-                        мэдээний үзэлт 👁 {item.viewers}
+                          👁 {item.viewers}
                         </span>
                       </div>
                       <p className="text-xs text-muted-foreground mb-2">
-                        {new Date(item.created_at).toLocaleDateString()}
+                        📅 {new Date(item.created_at).toLocaleDateString('mn-MN')}
                       </p>
+                      {item.updated_at && (
+                        <p className="text-xs text-muted-foreground/70 mb-2">
+                          ✏️ {new Date(item.updated_at).toLocaleDateString('mn-MN')}
+                        </p>
+                      )}
                       <p className="text-sm text-muted-foreground line-clamp-3">
                         {textPreview}
                       </p>
@@ -363,6 +393,7 @@ export default function ResearchPage() {
                           setNewStatus(item.status);
                           setNewPosition(item.position);
                           setNewIsResearch(item.is_research);
+                          setNewCreatedAt(formatDateForInput(item.created_at)); // ← SET DATE
                         }}
                       >
                         Засах
@@ -397,7 +428,6 @@ export default function ResearchPage() {
               <div className="flex gap-1">
                 {Array.from({ length: totalPages }, (_, i) => i + 1).map(
                   (page) => {
-                    // Show first page, last page, current page, and pages around current
                     if (
                       page === 1 ||
                       page === totalPages ||
@@ -444,8 +474,8 @@ export default function ResearchPage() {
 
       {/* Modal */}
       {open && (
-        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center">
-          <div className="bg-background w-[90vw] h-[90vh] max-w-screen max-h-screen rounded-2xl shadow-xl p-6 flex flex-col">
+        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
+          <div className="bg-background w-full max-w-[95vw] h-[90vh] rounded-2xl shadow-xl p-6 flex flex-col">
             <div className="flex justify-between items-center mb-4">
               <h2 className="text-xl font-bold">
                 {editId ? "Мэдээ засах" : "Мэдээ нэмэх"}
@@ -471,7 +501,7 @@ export default function ResearchPage() {
                 }
               />
 
-              <div className="flex gap-6">
+              <div className="flex flex-wrap gap-6">
                 <div className="flex items-center space-x-2">
                   <Checkbox
                     id="status"
@@ -481,7 +511,7 @@ export default function ResearchPage() {
                     }
                   />
                   <Label htmlFor="status" className="text-sm">
-                    {newStatus ? "Мэдээг нийтлэхгүй" : "Мэдээг нийтлэх"}
+                    Идэвхтэй
                   </Label>
                 </div>
 
@@ -495,6 +525,22 @@ export default function ResearchPage() {
                   />
                   <Label htmlFor="position">Онцолсон</Label>
                 </div>
+
+                {/* ✅ ОГНОО СОЛИХ */}
+                {editId && (
+                  <div className="flex items-center gap-2">
+                    <Label htmlFor="date" className="text-sm whitespace-nowrap">
+                      📅 Огноо:
+                    </Label>
+                    <Input
+                      id="date"
+                      type="date"
+                      value={newCreatedAt}
+                      onChange={(e) => setNewCreatedAt(e.target.value)}
+                      className="w-auto"
+                    />
+                  </div>
+                )}
               </div>
 
               <SimpleEditor
