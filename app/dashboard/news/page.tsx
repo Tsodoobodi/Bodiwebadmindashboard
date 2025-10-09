@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, useMemo } from "react";
 import Image from "next/image";
 import React from "react";
 import axios from "axios";
@@ -24,6 +24,16 @@ import {
   EmptyTitle,
 } from "@/components/ui/empty";
 import { Folder } from "lucide-react";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 
 interface NewsItems {
   id: string;
@@ -37,30 +47,44 @@ interface NewsItems {
   updated_at?: string;
 }
 
+interface UpdatePayload {
+  title: string;
+  contents: {
+    type: string;
+    content: Array<{ type: string; html: string }>;
+  };
+  status: boolean;
+  position: boolean;
+  is_research: boolean;
+  created_at?: string;
+}
+
 const API_URL =
   process.env.NEXT_PUBLIC_API_URL ||
   "https://bodi-backend-api.azurewebsites.net";
 
-export default function ResearchPage() {
+const ITEMS_PER_PAGE = 9;
+
+export default function NewsPage() {
   const [research, setResearch] = useState<NewsItems[]>([]);
   const [query, setQuery] = useState("");
   const [loading, setLoading] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [deleting, setDeleting] = useState(false);
   const [open, setOpen] = useState(false);
   const [newTitle, setNewTitle] = useState("");
   const [newContents, setNewContents] = useState<string>("");
   const [newStatus, setNewStatus] = useState(true);
   const [newPosition, setNewPosition] = useState(false);
   const [newIsResearch, setNewIsResearch] = useState(true);
-  const [newCreatedAt, setNewCreatedAt] = useState<string>(""); // ← ШИНЭ
+  const [newCreatedAt, setNewCreatedAt] = useState<string>("");
   const [editId, setEditId] = useState<string | null>(null);
-
-  // Pagination states
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [itemToDelete, setItemToDelete] = useState<NewsItems | null>(null);
   const [currentPage, setCurrentPage] = useState(1);
-  const itemsPerPage = 9;
-
-  // Filter states
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [dateSort, setDateSort] = useState<string>("newest");
+  const [errorMessage, setErrorMessage] = useState<string>("");
 
   const jsonToHTML = (json: Record<string, unknown>): string => {
     if (
@@ -79,7 +103,14 @@ export default function ResearchPage() {
   const fetchResearch = useCallback(async () => {
     try {
       setLoading(true);
+      setErrorMessage("");
       const res = await axios.get(`${API_URL}/api/news`);
+
+      // Validate response
+      if (!res.data || (!res.data.data && !Array.isArray(res.data))) {
+        throw new Error("Буруу хариу ирлээ");
+      }
+
       const researchData = res.data.data || res.data;
       const formattedResearch = researchData.map((item: NewsItems) => ({
         ...item,
@@ -91,6 +122,7 @@ export default function ResearchPage() {
       setResearch(formattedResearch);
     } catch (err) {
       console.error("Fetch research error:", err);
+      setErrorMessage("Мэдээ ачааллахад алдаа гарлаа.");
     } finally {
       setLoading(false);
     }
@@ -100,14 +132,47 @@ export default function ResearchPage() {
     fetchResearch();
   }, [fetchResearch]);
 
-  const handleDelete = async (id: string) => {
-    const confirmed = window.confirm("Та устгахдаа итгэлтэй байна уу?");
-    if (!confirmed) return;
+  // Modal escape key handler
+  useEffect(() => {
+    if (open) {
+      const handleEscape = (e: KeyboardEvent) => {
+        if (e.key === "Escape") {
+          resetModal();
+        }
+      };
+      document.addEventListener("keydown", handleEscape);
+      return () => document.removeEventListener("keydown", handleEscape);
+    }
+  }, [open]);
+
+  // Auto-clear error message after 5 seconds
+  useEffect(() => {
+    if (errorMessage) {
+      const timer = setTimeout(() => setErrorMessage(""), 5000);
+      return () => clearTimeout(timer);
+    }
+  }, [errorMessage]);
+
+  const openDeleteDialog = (item: NewsItems) => {
+    setItemToDelete(item);
+    setDeleteDialogOpen(true);
+  };
+
+  const confirmDelete = async () => {
+    if (!itemToDelete) return;
+
     try {
-      await axios.delete(`${API_URL}/api/news/${id}`);
-      setResearch(research.filter((item) => item.id !== id));
+      setDeleting(true);
+      await axios.delete(`${API_URL}/api/news/${itemToDelete.id}`);
+      setResearch(research.filter((item) => item.id !== itemToDelete.id));
+      setDeleteDialogOpen(false);
+      setItemToDelete(null);
+      console.log("Мэдээ амжилттай устгагдлаа");
     } catch (err) {
       console.error("Delete error:", err);
+      setErrorMessage("Мэдээ устгахад алдаа гарлаа.");
+    } finally {
+      setDeleting(false);
     }
   };
 
@@ -127,7 +192,6 @@ export default function ResearchPage() {
     return html.replace(/<[^>]+>/g, "").trim();
   };
 
-  // Format date for input (YYYY-MM-DD)
   const formatDateForInput = (dateString: string): string => {
     try {
       const date = new Date(dateString);
@@ -137,27 +201,29 @@ export default function ResearchPage() {
     }
   };
 
-  const handleSave = async () => {
-    try {
-      if (!newTitle || !newContents) {
-        alert("Гарчиг болон контент оруулна уу!");
-        return;
-      }
+  const validateForm = (): boolean => {
+    if (!newTitle.trim()) {
+      setErrorMessage("Гарчиг оруулна уу!");
+      return false;
+    }
 
-      interface UpdatePayload {
-        title: string;
-        contents: {
-          type: string;
-          content: Array<{ type: string; html: string }>;
-        };
-        status: boolean;
-        position: boolean;
-        is_research: boolean;
-        created_at?: string;
-      }
+    if (!newContents.trim()) {
+      setErrorMessage("Контент оруулна уу!");
+      return false;
+    }
+
+    return true;
+  };
+
+  const handleSave = async () => {
+    if (!validateForm()) return;
+
+    try {
+      setSaving(true);
+      setErrorMessage("");
 
       const payload: UpdatePayload = {
-        title: newTitle,
+        title: newTitle.trim(),
         contents: {
           type: "doc",
           content: [{ type: "html", html: newContents }],
@@ -167,7 +233,7 @@ export default function ResearchPage() {
         is_research: newIsResearch,
       };
 
-      // ✅ Огноо өөрчилсөн бол payload-д нэмэх
+      // Огноо өөрчилсөн бол payload-д нэмэх
       if (editId && newCreatedAt) {
         payload.created_at = new Date(newCreatedAt).toISOString();
       }
@@ -182,28 +248,38 @@ export default function ResearchPage() {
               : item
           )
         );
+        console.log("Мэдээ амжилттай шинэчлэгдлээ");
       } else {
         const res = await axios.post(`${API_URL}/api/news`, payload);
         const newItem = res.data.data || res.data;
         setResearch([{ ...newItem, contents: newContents }, ...research]);
+        console.log("Шинэ мэдээ амжилттай нэмэгдлээ");
       }
 
-      setOpen(false);
-      setNewTitle("");
-      setNewContents("");
-      setNewStatus(true);
-      setNewPosition(false);
-      setNewIsResearch(true);
-      setNewCreatedAt("");
-      setEditId(null);
+      // Reset form
+      resetModal();
     } catch (err) {
       console.error("Save error:", err);
-      alert("Алдаа гарлаа. Console-г шалгана уу.");
+      setErrorMessage("Мэдээ хадгалахад алдаа гарлаа.");
+    } finally {
+      setSaving(false);
     }
   };
 
-  // Filter and sort logic
-  const getFilteredAndSortedResearch = () => {
+  const handleTitleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setNewTitle(e.target.value);
+  };
+
+  const handleDateChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setNewCreatedAt(e.target.value);
+  };
+
+  const handleImageError = (e: React.SyntheticEvent<HTMLImageElement>) => {
+    e.currentTarget.src = "/placeholder-news.png";
+  };
+
+  // Filter and sort with useMemo for performance
+  const filteredResearch = useMemo(() => {
     let filtered = research;
 
     if (query) {
@@ -230,14 +306,12 @@ export default function ResearchPage() {
     });
 
     return sorted;
-  };
-
-  const filteredResearch = getFilteredAndSortedResearch();
+  }, [research, query, statusFilter, dateSort]);
 
   // Pagination logic
-  const totalPages = Math.ceil(filteredResearch.length / itemsPerPage);
-  const startIndex = (currentPage - 1) * itemsPerPage;
-  const endIndex = startIndex + itemsPerPage;
+  const totalPages = Math.ceil(filteredResearch.length / ITEMS_PER_PAGE);
+  const startIndex = (currentPage - 1) * ITEMS_PER_PAGE;
+  const endIndex = startIndex + ITEMS_PER_PAGE;
   const currentItems = filteredResearch.slice(startIndex, endIndex);
 
   useEffect(() => {
@@ -249,8 +323,42 @@ export default function ResearchPage() {
     window.scrollTo({ top: 0, behavior: "smooth" });
   };
 
+  const resetModal = () => {
+    setOpen(false);
+    setEditId(null);
+    setNewTitle("");
+    setNewContents("");
+    setNewStatus(true);
+    setNewPosition(false);
+    setNewIsResearch(true);
+    setNewCreatedAt("");
+  };
+
+  const openNewModal = () => {
+    resetModal();
+    setOpen(true);
+  };
+
+  const openEditModal = (item: NewsItems) => {
+    setOpen(true);
+    setEditId(item.id);
+    setNewTitle(item.title);
+    setNewContents(typeof item.contents === "string" ? item.contents : "");
+    setNewStatus(item.status);
+    setNewPosition(item.position);
+    setNewIsResearch(item.is_research);
+    setNewCreatedAt(formatDateForInput(item.created_at));
+  };
+
   return (
     <div className="flex flex-col gap-6">
+      {/* Error Message Banner */}
+      {errorMessage && (
+        <div className="bg-destructive/10 border border-destructive text-destructive px-4 py-3 rounded-lg">
+          <p className="text-sm font-medium">{errorMessage}</p>
+        </div>
+      )}
+
       {/* Search and Filters */}
       <div className="flex flex-col gap-4">
         <div className="flex gap-4 items-center flex-wrap">
@@ -285,16 +393,7 @@ export default function ResearchPage() {
 
           <Button
             className="bg-none rounded-xl w-full md:w-[200px] h-10 border border-gray-500 hover:bg-gray-500 hover:text-white transition-all"
-            onClick={() => {
-              setOpen(true);
-              setEditId(null);
-              setNewTitle("");
-              setNewContents("");
-              setNewStatus(true);
-              setNewPosition(false);
-              setNewIsResearch(true);
-              setNewCreatedAt("");
-            }}
+            onClick={openNewModal}
           >
             + Шинэ мэдээ нэмэх
           </Button>
@@ -347,6 +446,7 @@ export default function ResearchPage() {
                       src={firstImg}
                       alt={item.title}
                       className="w-full h-40 object-cover"
+                      onError={handleImageError}
                     />
                   )}
 
@@ -403,20 +503,7 @@ export default function ResearchPage() {
                         className="cursor-pointer"
                         size="sm"
                         variant="outline"
-                        onClick={() => {
-                          setOpen(true);
-                          setEditId(item.id);
-                          setNewTitle(item.title);
-                          setNewContents(
-                            typeof item.contents === "string"
-                              ? item.contents
-                              : ""
-                          );
-                          setNewStatus(item.status);
-                          setNewPosition(item.position);
-                          setNewIsResearch(item.is_research);
-                          setNewCreatedAt(formatDateForInput(item.created_at)); // ← SET DATE
-                        }}
+                        onClick={() => openEditModal(item)}
                       >
                         Засах
                       </Button>
@@ -424,7 +511,7 @@ export default function ResearchPage() {
                         className="cursor-pointer"
                         size="sm"
                         variant="destructive"
-                        onClick={() => handleDelete(item.id)}
+                        onClick={() => openDeleteDialog(item)}
                       >
                         Устгах
                       </Button>
@@ -502,14 +589,7 @@ export default function ResearchPage() {
               <h2 className="text-xl font-bold">
                 {editId ? "Мэдээ засах" : "Мэдээ нэмэх"}
               </h2>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => {
-                  setOpen(false);
-                  setEditId(null);
-                }}
-              >
+              <Button variant="outline" size="sm" onClick={resetModal}>
                 X
               </Button>
             </div>
@@ -518,9 +598,7 @@ export default function ResearchPage() {
               <Input
                 placeholder="Гарчиг"
                 value={newTitle}
-                onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
-                  setNewTitle(e.target.value)
-                }
+                onChange={handleTitleChange}
               />
 
               <div className="flex flex-wrap gap-6">
@@ -548,7 +626,6 @@ export default function ResearchPage() {
                   <Label htmlFor="position">Онцолсон</Label>
                 </div>
 
-                {/* ✅ ОГНОО СОЛИХ */}
                 {editId && (
                   <div className="flex items-center gap-2">
                     <Label htmlFor="date" className="text-sm whitespace-nowrap">
@@ -558,7 +635,7 @@ export default function ResearchPage() {
                       id="date"
                       type="date"
                       value={newCreatedAt}
-                      onChange={(e) => setNewCreatedAt(e.target.value)}
+                      onChange={handleDateChange}
                       className="w-auto"
                     />
                   </div>
@@ -573,16 +650,50 @@ export default function ResearchPage() {
             </div>
 
             <div className="flex justify-end mt-4 gap-2">
-              <Button variant="outline" onClick={() => setOpen(false)}>
+              <Button variant="outline" onClick={resetModal} disabled={saving}>
                 Болих
               </Button>
-              <Button onClick={handleSave}>
-                {editId ? "Шинэчлэх" : "Нэмэх"}
+              <Button onClick={handleSave} disabled={saving}>
+                {saving
+                  ? "Хадгалж байна..."
+                  : editId
+                  ? "Шинэчлэх"
+                  : "Нэмэх"}
               </Button>
             </div>
           </div>
         </div>
       )}
+
+      {/* Delete Confirmation Dialog */}
+      <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Та устгахдаа итгэлтэй байна уу?</AlertDialogTitle>
+            <AlertDialogDescription>
+              {itemToDelete && (
+                <>
+                  <span className="font-medium text-foreground">
+                    {itemToDelete.title}
+                  </span>{" "}
+                  гэсэн мэдээг бүрмөсөн устгах гэж байна. Энэ үйлдлийг буцаах
+                  боломжгүй.
+                </>
+              )}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={deleting}>Болих</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={confirmDelete}
+              disabled={deleting}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90 text-white"
+            >
+              {deleting ? "Устгаж байна..." : "Устгах"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

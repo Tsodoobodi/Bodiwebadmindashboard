@@ -6,6 +6,9 @@ import axios from "axios";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Label } from "@/components/ui/label";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import Image from "next/image";
 import {
   Empty,
@@ -21,6 +24,10 @@ interface VideoNewsItem {
   title: string;
   youtube_url: string;
   description?: string;
+  status: boolean;
+  viewers: number;
+  position: boolean;
+  is_research: boolean;
   created_at: string;
   updated_at?: string;
 }
@@ -45,6 +52,9 @@ const extractYouTubeId = (url: string): string | null => {
 export default function VideoNewsPage() {
   const [videoNews, setVideoNews] = useState<VideoNewsItem[]>([]);
   const [query, setQuery] = useState("");
+  const [statusFilter, setStatusFilter] = useState<string>("all");
+  const [startDate, setStartDate] = useState("");
+  const [endDate, setEndDate] = useState("");
   const [loading, setLoading] = useState(false);
 
   // Modal state
@@ -52,8 +62,10 @@ export default function VideoNewsPage() {
   const [newTitle, setNewTitle] = useState("");
   const [newYoutubeUrl, setNewYoutubeUrl] = useState("");
   const [newDescription, setNewDescription] = useState("");
+  const [newStatus, setNewStatus] = useState(true);
+  const [newPosition, setNewPosition] = useState(false);
+  const [newIsResearch, setNewIsResearch] = useState(true);
   const [editId, setEditId] = useState<string | null>(null);
-  const [editDate, setEditDate] = useState<string>("");
 
   const fetchVideoNews = useCallback(async () => {
     try {
@@ -90,42 +102,27 @@ export default function VideoNewsPage() {
         return;
       }
 
-      // YouTube URL validation
       if (!extractYouTubeId(newYoutubeUrl)) {
-        alert(
-          "Зөв YouTube URL оруулна уу! (Жишээ: https://www.youtube.com/watch?v=VIDEO_ID)"
-        );
+        alert("Зөв YouTube URL оруулна уу!");
         return;
       }
 
-      const payload: {
-        title: string;
-        youtube_url: string;
-        description: string;
-        updated_at?: string;
-      } = {
+      const payload = {
         title: newTitle,
         youtube_url: newYoutubeUrl,
         description: newDescription,
+        status: newStatus,
+        position: newPosition,
+        is_research: newIsResearch,
       };
 
-      // Edit mode дээр огноо өөрчлөх
-      if (editId && editDate) {
-        payload.updated_at = new Date(editDate).toISOString();
-      }
-
       if (editId) {
-        // Edit mode
-        const res = await axios.put(
-          `${API_URL}/api/video-news/${editId}`,
-          payload
-        );
+        const res = await axios.put(`${API_URL}/api/video-news/${editId}`, payload);
         const updatedItem = res.data.data || res.data;
         setVideoNews(
           videoNews.map((item) => (item.id === editId ? updatedItem : item))
         );
       } else {
-        // Add mode
         const res = await axios.post(`${API_URL}/api/video-news`, payload);
         const newItem = res.data.data || res.data;
         setVideoNews([newItem, ...videoNews]);
@@ -135,54 +132,115 @@ export default function VideoNewsPage() {
       setNewTitle("");
       setNewYoutubeUrl("");
       setNewDescription("");
+      setNewStatus(true);
+      setNewPosition(false);
+      setNewIsResearch(true);
       setEditId(null);
-      setEditDate("");
     } catch (err) {
       console.error("Save error:", err);
-      if (axios.isAxiosError(err)) {
-        alert(err.response?.data?.message || "Алдаа гарлаа");
-      } else {
-        alert("Алдаа гарлаа. Console-г шалгана уу.");
-      }
+      alert("Алдаа гарлаа. Console-г шалгана уу.");
     }
   };
 
-  const filteredVideoNews = videoNews.filter((item) =>
-    item.title.toLowerCase().includes(query.toLowerCase())
-  );
+  const filtered = videoNews.filter((item) => {
+    const matchesQuery = item.title.toLowerCase().includes(query.toLowerCase());
+    const matchesStatus =
+      statusFilter === "all" ? true :
+      statusFilter === "active" ? item.status === true :
+      statusFilter === "inactive" ? item.status === false : true;
+
+    let matchesDate = true;
+    if (startDate) {
+      matchesDate = matchesDate && new Date(item.created_at) >= new Date(startDate);
+    }
+    if (endDate) {
+      matchesDate = matchesDate && new Date(item.created_at) <= new Date(endDate);
+    }
+
+    return matchesQuery && matchesStatus && matchesDate;
+  });
+
+  const handleResetFilters = () => {
+    setQuery("");
+    setStatusFilter("all");
+    setStartDate("");
+    setEndDate("");
+  };
 
   return (
-    <div className="flex flex-col gap-6">
-      {/* Search + Add */}
-      <div className="flex gap-8 items-center mb-4">
-        <input
+    <div className="flex flex-col gap-8 animate-fade-in">
+      {/* FILTERS */}
+      <div className="bg-card/60 backdrop-blur-md rounded-2xl shadow-sm border p-4 flex flex-wrap items-center gap-4 sticky top-0 z-10">
+        <Input
           type="text"
-          placeholder=" Видео мэдээ хайх ..."
+          placeholder="Видео хайх..."
           value={query}
           onChange={(e) => setQuery(e.target.value)}
-          className="w-[500px] p-2 rounded-xl border bg-background/50 text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-blue-500 transition"
+          className="w-[300px]"
         />
+
+        <Select value={statusFilter} onValueChange={setStatusFilter}>
+          <SelectTrigger className="w-[180px]">
+            <SelectValue placeholder="Статус" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">Бүгд</SelectItem>
+            <SelectItem value="active">Идэвхтэй</SelectItem>
+            <SelectItem value="inactive">Идэвхгүй</SelectItem>
+          </SelectContent>
+        </Select>
+
+        <div className="flex items-center gap-2">
+          <Label>Эхлэх:</Label>
+          <Input type="date" value={startDate} onChange={(e) => setStartDate(e.target.value)} className="w-[160px]" />
+        </div>
+
+        <div className="flex items-center gap-2">
+          <Label>Дуусах:</Label>
+          <Input type="date" value={endDate} onChange={(e) => setEndDate(e.target.value)} className="w-[160px]" />
+        </div>
+
+        <Button variant="outline" onClick={handleResetFilters}>
+          Шүүлтүүр цэвэрлэх
+        </Button>
+
         <Button
-          className="bg-none rounded-xl w-[200px] h-10 text-md border border-gray-500 hover:bg-gray-500 hover:text-white transition-all duration-300 ease-in-out cursor-pointer"
           onClick={() => {
             setOpen(true);
             setEditId(null);
             setNewTitle("");
             setNewYoutubeUrl("");
             setNewDescription("");
-            setEditDate("");
+            setNewStatus(true);
+            setNewPosition(false);
+            setNewIsResearch(true);
           }}
+          className="ml-auto bg-gradient-to-r from-blue-600 to-indigo-500 text-white hover:shadow-lg transition-all duration-300"
         >
           + Шинэ видео нэмэх
         </Button>
+
+        <span className="text-sm text-muted-foreground ml-auto">
+          {filtered.length} / {videoNews.length} мэдээ
+        </span>
       </div>
 
-      {/* Video News Grid */}
+      {/* Video Grid */}
       {loading ? (
-        <p className="text-center text-muted-foreground">Loading...</p>
+        <p className="text-center text-muted-foreground py-10">Уншиж байна...</p>
+      ) : filtered.length === 0 ? (
+        <Empty>
+          <EmptyHeader>
+            <EmptyMedia variant="icon">
+              <Folder />
+            </EmptyMedia>
+            <EmptyTitle>Мэдээ олдсонгүй</EmptyTitle>
+            <EmptyDescription>Та одоогоор ямар ч видео мэдээ үүсгээгүй байна.</EmptyDescription>
+          </EmptyHeader>
+        </Empty>
       ) : (
-        <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
-          {filteredVideoNews.map((item) => {
+        <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+          {filtered.map((item) => {
             const videoId = extractYouTubeId(item.youtube_url);
             const thumbnailUrl = videoId
               ? `https://img.youtube.com/vi/${videoId}/maxresdefault.jpg`
@@ -191,24 +249,23 @@ export default function VideoNewsPage() {
             return (
               <div
                 key={item.id}
-                className="bg-card rounded-2xl shadow-md overflow-hidden 
-                  flex flex-col transition-all duration-300 ease-in-out 
-                  hover:shadow-xl"
+                className="bg-card rounded-2xl border border-border overflow-hidden shadow-md 
+                  hover:shadow-2xl hover:-translate-y-1 transition-all duration-300 flex flex-col"
               >
-                {/* YouTube Thumbnail */}
+                {/* Thumbnail */}
                 {thumbnailUrl && (
-                  <div className="relative w-full h-48 bg-gray-200">
+                  <div className="relative w-full h-48 group overflow-hidden">
                     <Image
                       width={500}
-                      height={400}
+                      height={300}
                       src={thumbnailUrl}
                       alt={item.title}
-                      className="w-full h-full object-cover"
+                      className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
                     />
-                    <div className="absolute inset-0 flex items-center justify-center">
-                      <div className="w-16 h-16 bg-red-600 rounded-full flex items-center justify-center opacity-80 hover:opacity-100 transition">
+                    <div className="absolute inset-0 flex items-center justify-center bg-black/30 opacity-0 group-hover:opacity-100 transition">
+                      <div className="w-14 h-14 bg-red-600 rounded-full flex items-center justify-center shadow-lg">
                         <svg
-                          className="w-8 h-8 text-white ml-1"
+                          className="w-6 h-6 text-white ml-1"
                           fill="currentColor"
                           viewBox="0 0 24 24"
                         >
@@ -219,30 +276,36 @@ export default function VideoNewsPage() {
                   </div>
                 )}
 
-                <div className="p-4 flex-1 flex flex-col justify-between">
+                {/* Content */}
+                <div className="p-5 flex flex-col flex-1 justify-between">
                   <div>
-                    <h3 className="font-semibold line-clamp-2 mb-2">
-                      {item.title}
-                    </h3>
+                    <div className="flex items-center justify-between mb-2">
+                      <h3 className="font-semibold text-base line-clamp-1">{item.title}</h3>
+                      <div className="flex gap-1">
+                        {item.position && <span className="text-xs bg-yellow-500/80 px-2 py-0.5 rounded text-white">⭐</span>}
+                        {item.is_research && <span className="text-xs bg-blue-600/80 px-2 py-0.5 rounded text-white">🔬</span>}
+                      </div>
+                    </div>
+
                     {item.description && (
-                      <p className="text-sm text-muted-foreground line-clamp-3 mb-2">
+                      <p className="text-sm text-muted-foreground line-clamp-3 mb-3 leading-relaxed">
                         {item.description}
                       </p>
                     )}
                     <p className="text-xs text-muted-foreground">
-                      Оруулсан: {new Date(item.created_at).toLocaleDateString()}
+                      📅 {new Date(item.created_at).toLocaleDateString()}
                     </p>
-                    {item.updated_at && (
-                      <p className="text-xs text-green-600">
-                        Шинэчилсэн:{" "}
-                        {new Date(item.updated_at).toLocaleDateString()}
-                      </p>
-                    )}
+                  </div>
+
+                  <div className="flex justify-between items-center mt-auto pt-2 border-t">
+                    <span className={`text-xs px-2 py-1 rounded-full ${item.status ? "bg-green-500/80 text-white" : "bg-gray-400 text-white"}`}>
+                      {item.status ? "Идэвхтэй" : "Идэвхгүй"}
+                    </span>
+                    <span className="text-xs text-muted-foreground">👁 {item.viewers}</span>
                   </div>
 
                   <div className="mt-4 flex gap-2">
                     <Button
-                      className="cursor-pointer"
                       size="sm"
                       variant="outline"
                       onClick={() => {
@@ -251,47 +314,31 @@ export default function VideoNewsPage() {
                         setNewTitle(item.title);
                         setNewYoutubeUrl(item.youtube_url);
                         setNewDescription(item.description || "");
-                        setEditDate(
-                          item.updated_at
-                            ? item.updated_at.slice(0, 10)
-                            : item.created_at.slice(0, 10)
-                        );
+                        setNewStatus(item.status);
+                        setNewPosition(item.position);
+                        setNewIsResearch(item.is_research);
                       }}
+                      className="flex-1 hover:bg-blue-50 transition"
                     >
-                      Edit
+                      Засах
                     </Button>
                     <Button
-                      className="cursor-pointer"
                       size="sm"
                       variant="destructive"
                       onClick={() => handleDelete(item.id)}
+                      className="flex-1"
                     >
-                      Delete
+                      Устгах
                     </Button>
                   </div>
                 </div>
               </div>
             );
           })}
-          {filteredVideoNews.length === 0 && (
-            <div className="col-span-full text-center text-muted-foreground">
-              <Empty>
-                <EmptyHeader>
-                  <EmptyMedia variant="icon">
-                    <Folder />
-                  </EmptyMedia>
-                  <EmptyTitle>Мэдээ олдсонгүй.</EmptyTitle>
-                  <EmptyDescription>
-                    Та одоогоор ямар ч мэдээ үүсгээгүй байна.
-                  </EmptyDescription>
-                </EmptyHeader>
-              </Empty>
-            </div>
-          )}
         </div>
       )}
 
-      {/* Add / Edit Modal */}
+      {/* Modal */}
       {open && (
         <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
           <div className="bg-background w-full max-w-2xl rounded-2xl shadow-xl p-6 flex flex-col max-h-[90vh]">
@@ -315,9 +362,7 @@ export default function VideoNewsPage() {
             {/* Content */}
             <div className="flex-1 flex flex-col gap-4 overflow-auto">
               <div>
-                <label className="text-sm font-medium mb-1 block">
-                  Гарчиг *
-                </label>
+                <label className="text-sm font-medium mb-1 block">Гарчиг *</label>
                 <Input
                   placeholder="Видео гарчиг"
                   value={newTitle}
@@ -334,15 +379,10 @@ export default function VideoNewsPage() {
                   value={newYoutubeUrl}
                   onChange={(e) => setNewYoutubeUrl(e.target.value)}
                 />
-                <p className="text-xs text-muted-foreground mt-1">
-                  Жишээ: https://www.youtube.com/watch?v=dQw4w9WgXcQ
-                </p>
               </div>
 
               <div>
-                <label className="text-sm font-medium mb-1 block">
-                  Тайлбар
-                </label>
+                <label className="text-sm font-medium mb-1 block">Тайлбар</label>
                 <Textarea
                   placeholder="Видеоны тайлбар..."
                   value={newDescription}
@@ -351,21 +391,21 @@ export default function VideoNewsPage() {
                 />
               </div>
 
-              {editId && (
-                <div>
-                  <label className="text-sm font-medium mb-1 block">
-                    Огноо өөрчлөх
-                  </label>
-                  <input
-                    type="date"
-                    value={editDate}
-                    onChange={(e) => setEditDate(e.target.value)}
-                    className="w-full p-2 rounded border bg-background"
-                  />
+              <div className="flex gap-6">
+                <div className="flex items-center space-x-2">
+                  <Checkbox id="status" checked={newStatus} onCheckedChange={(checked) => setNewStatus(checked as boolean)} />
+                  <Label htmlFor="status">Идэвхтэй</Label>
                 </div>
-              )}
+                <div className="flex items-center space-x-2">
+                  <Checkbox id="position" checked={newPosition} onCheckedChange={(checked) => setNewPosition(checked as boolean)} />
+                  <Label htmlFor="position">Онцолсон</Label>
+                </div>
+                <div className="flex items-center space-x-2">
+                  <Checkbox id="is_research" checked={newIsResearch} onCheckedChange={(checked) => setNewIsResearch(checked as boolean)} />
+                  <Label htmlFor="is_research">Судалгаа</Label>
+                </div>
+              </div>
 
-              {/* Preview */}
               {newYoutubeUrl && extractYouTubeId(newYoutubeUrl) && (
                 <div>
                   <label className="text-sm font-medium mb-1 block">
@@ -380,7 +420,6 @@ export default function VideoNewsPage() {
                       )}`}
                       title="YouTube video preview"
                       frameBorder="0"
-                      allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
                       allowFullScreen
                       className="rounded"
                     />
@@ -389,7 +428,6 @@ export default function VideoNewsPage() {
               )}
             </div>
 
-            {/* Footer */}
             <div className="flex justify-end mt-4 gap-2">
               <Button
                 variant="outline"
