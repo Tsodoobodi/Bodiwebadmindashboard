@@ -7,6 +7,14 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import Image from "next/image";
+import {
+  Empty,
+  EmptyDescription,
+  EmptyHeader,
+  EmptyMedia,
+  EmptyTitle,
+} from "@/components/ui/empty";
+import { Folder } from "lucide-react";
 
 interface VideoNewsItem {
   id: string;
@@ -17,14 +25,16 @@ interface VideoNewsItem {
   updated_at?: string;
 }
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL || "https://bodi-backend-api.azurewebsites.net";
+const API_URL =
+  process.env.NEXT_PUBLIC_API_URL ||
+  "https://bodi-backend-api.azurewebsites.net";
 
 // YouTube Video ID гаргах
 const extractYouTubeId = (url: string): string | null => {
   const patterns = [
-    /(?:youtube\.com\/watch\?v=|youtu\.be\/|youtube\.com\/embed\/)([a-zA-Z0-9_-]{11})/
+    /(?:youtube\.com\/watch\?v=|youtu\.be\/|youtube\.com\/embed\/)([a-zA-Z0-9_-]{11})/,
   ];
-  
+
   for (const pattern of patterns) {
     const match = url.match(pattern);
     if (match) return match[1];
@@ -82,7 +92,9 @@ export default function VideoNewsPage() {
 
       // YouTube URL validation
       if (!extractYouTubeId(newYoutubeUrl)) {
-        alert("Зөв YouTube URL оруулна уу! (Жишээ: https://www.youtube.com/watch?v=VIDEO_ID)");
+        alert(
+          "Зөв YouTube URL оруулна уу! (Жишээ: https://www.youtube.com/watch?v=VIDEO_ID)"
+        );
         return;
       }
 
@@ -110,9 +122,7 @@ export default function VideoNewsPage() {
         );
         const updatedItem = res.data.data || res.data;
         setVideoNews(
-          videoNews.map((item) =>
-            item.id === editId ? updatedItem : item
-          )
+          videoNews.map((item) => (item.id === editId ? updatedItem : item))
         );
       } else {
         // Add mode
@@ -264,9 +274,19 @@ export default function VideoNewsPage() {
             );
           })}
           {filteredVideoNews.length === 0 && (
-            <p className="col-span-full text-center text-muted-foreground">
-              Видео мэдээ олдсонгүй.
-            </p>
+            <div className="col-span-full text-center text-muted-foreground">
+              <Empty>
+                <EmptyHeader>
+                  <EmptyMedia variant="icon">
+                    <Folder />
+                  </EmptyMedia>
+                  <EmptyTitle>Мэдээ олдсонгүй.</EmptyTitle>
+                  <EmptyDescription>
+                    Та одоогоор ямар ч мэдээ үүсгээгүй байна.
+                  </EmptyDescription>
+                </EmptyHeader>
+              </Empty>
+            </div>
           )}
         </div>
       )}

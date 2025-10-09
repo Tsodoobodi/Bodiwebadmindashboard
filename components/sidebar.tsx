@@ -10,8 +10,8 @@ import Image from "next/image";
 const menu = [
   { label: "Мэдээ мэдээлэл", icon: Newspaper, href: "/dashboard/news" },
   { label: "Видео мэдээ", icon: Video, href: "/dashboard/videonews" },
-  { label: "Bonz", icon: Book },          
-  { label: "RnD", icon: Users },  
+  { label: "Bonz", icon: Book },
+  { label: "RnD", icon: Users },
 ];
 
 const bonzSubMenu = [
@@ -28,26 +28,22 @@ const rndSubMenu = [
 ];
 
 export default function Sidebar() {
-  const pathname = usePathname();
-  const [openMenus, setOpenMenus] = useState<{ [key: string]: boolean }>({
+  const pathname = usePathname() ?? "";
+  const [openMenus, setOpenMenus] = useState<Record<string, boolean>>({
     Bonz: false,
     RnD: false,
   });
 
-  const toggleMenu = (menuLabel: string) => {
-    setOpenMenus((prev) => ({
-      ...prev,
-      [menuLabel]: !prev[menuLabel],
-    }));
-  };
-
-  // Автомат нээх: pathname submenu-д таарч байвал
   useEffect(() => {
     setOpenMenus({
       Bonz: bonzSubMenu.some((sub) => pathname.startsWith(sub.href)),
       RnD: rndSubMenu.some((sub) => pathname.startsWith(sub.href)),
     });
   }, [pathname]);
+
+  const toggleMenu = (menuLabel: string) => {
+    setOpenMenus((prev) => ({ ...prev, [menuLabel]: !prev[menuLabel] }));
+  };
 
   return (
     <motion.aside
@@ -76,92 +72,74 @@ export default function Sidebar() {
 
           const subMenuItems = isBonz ? bonzSubMenu : isRnd ? rndSubMenu : [];
 
-          const isOpen = openMenus[item.label];
+          const isOpen = !!openMenus[item.label];
+          const isActiveParent = isOpen || subMenuItems.some((sub) => pathname.startsWith(sub.href));
+
+          if (isBonz || isRnd) {
+            return (
+              <div key={item.label} className="relative">
+                <button
+                  type="button"
+                  onClick={() => toggleMenu(item.label)}
+                  aria-expanded={isOpen}
+                  className={`flex items-center justify-between px-4 py-3 rounded-lg w-full text-left transition-all duration-300 ${
+                    isActiveParent
+                      ? "bg-blue-50 text-blue-600 shadow-md"
+                      : "text-gray-700 hover:bg-gray-100 hover:text-blue-600"
+                  }`}
+                >
+                  <div className="flex items-center gap-3">
+                    <Icon size={20} className={`${isActiveParent ? "text-blue-600" : "text-gray-400"}`} />
+                    <span className="font-medium">{item.label}</span>
+                  </div>
+                  {isOpen ? <ChevronDown size={18} className="text-gray-500" /> : <ChevronRight size={18} className="text-gray-400" />}
+                </button>
+
+                <AnimatePresence initial={false}>
+                  {isOpen && (
+                    <motion.div
+                      initial={{ height: 0, opacity: 0 }}
+                      animate={{ height: "auto", opacity: 1 }}
+                      exit={{ height: 0, opacity: 0 }}
+                      transition={{ duration: 0.2 }}
+                      className="flex flex-col ml-6 mt-1 gap-1 overflow-hidden"
+                    >
+                      {subMenuItems.map((sub) => {
+                        const activeSub = pathname === sub.href;
+                        return (
+                          <Link
+                            key={sub.label}
+                            href={sub.href}
+                            className={`px-4 py-2 rounded-lg block transition-all duration-200 transform ${
+                              activeSub
+                                ? "bg-blue-50 text-blue-600 font-semibold shadow-inner"
+                                : "text-gray-700 hover:bg-gray-100 hover:text-blue-600 hover:scale-[1.02]"
+                            }`}
+                          >
+                            {sub.label}
+                          </Link>
+                        );
+                      })}
+                    </motion.div>
+                  )}
+                </AnimatePresence>
+              </div>
+            );
+          }
+
+          const activeTop = item.href ? pathname.startsWith(item.href) : false;
 
           return (
-            <div key={item.label} className="relative">
-              {isBonz || isRnd ? (
-                <>
-                  <div
-                    onClick={() => toggleMenu(item.label)}
-                    className={`flex items-center justify-between px-4 py-3 rounded-lg cursor-pointer transition-all duration-300 ${
-                      isOpen
-                        ? "bg-blue-50 text-blue-600 shadow-md"
-                        : "text-gray-700 hover:bg-gray-100 hover:text-blue-600"
-                    }`}
-                  >
-                    <div className="flex items-center gap-3">
-                      <Icon size={20} className="text-gray-400" />
-                      <span className="font-medium">{item.label}</span>
-                    </div>
-                    {isOpen ? (
-                      <ChevronDown size={18} className="text-gray-500" />
-                    ) : (
-                      <ChevronRight size={18} className="text-gray-400" />
-                    )}
-                  </div>
-
-                  <AnimatePresence initial={false}>
-                    {isOpen && (
-                      <motion.div
-                        initial={{ height: 0, opacity: 0 }}
-                        animate={{ height: "auto", opacity: 1 }}
-                        exit={{ height: 0, opacity: 0 }}
-                        transition={{ duration: 0.25 }}
-                        className="flex flex-col ml-6 mt-1 gap-1 overflow-hidden"
-                      >
-                        {subMenuItems.map((sub) => {
-                          const activeSub = pathname === sub.href;
-                          return (
-                            <Link key={sub.label} href={sub.href}>
-                              <motion.div
-                                whileHover={{ scale: 1.02 }}
-                                className={`px-4 py-2 rounded-lg cursor-pointer transition-all duration-200 ${
-                                  activeSub
-                                    ? "bg-blue-50 text-blue-600 font-semibold shadow-inner"
-                                    : "text-gray-700 hover:bg-gray-100 hover:text-blue-600"
-                                }`}
-                              >
-                                {sub.label}
-                              </motion.div>
-                            </Link>
-                          );
-                        })}
-                      </motion.div>
-                    )}
-                  </AnimatePresence>
-                </>
-              ) : (
-                <Link href={item.href!}>
-                  <motion.div
-                    whileHover={{ scale: 1.02 }}
-                    className={`flex items-center gap-3 px-4 py-3 rounded-lg font-medium cursor-pointer transition-all duration-300 ${
-                      pathname.startsWith(item.href!)
-                        ? "bg-blue-50 text-blue-600 shadow-md"
-                        : "text-gray-700 hover:bg-gray-100 hover:text-blue-600"
-                    }`}
-                  >
-                    <Icon
-                      size={20}
-                      className={`transition-colors ${
-                        pathname.startsWith(item.href!)
-                          ? "text-blue-600"
-                          : "text-gray-400"
-                      }`}
-                    />
-                    <span
-                      className={`transition-transform ${
-                        pathname.startsWith(item.href!)
-                          ? "translate-x-1 font-semibold"
-                          : ""
-                      }`}
-                    >
-                      {item.label}
-                    </span>
-                  </motion.div>
-                </Link>
-              )}
-            </div>
+            <Link
+              key={item.label}
+              href={item.href ?? "#"}
+              className={`flex items-center gap-3 px-4 py-3 rounded-lg font-medium transition-all duration-300 ${
+                activeTop ? "bg-blue-50 text-blue-600 shadow-md" : "text-gray-700 hover:bg-gray-100 hover:text-blue-600"
+              }`}
+            >
+              <Icon size={20} className={`transition-colors ${activeTop ? "text-blue-600" : "text-gray-400"}`} />
+              <span className={`${activeTop ? "translate-x-1 font-semibold" : ""}`}>{item.label}</span>
+            </Link>
           );
         })}
       </nav>

@@ -16,6 +16,14 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import {
+  Empty,
+  EmptyDescription,
+  EmptyHeader,
+  EmptyMedia,
+  EmptyTitle,
+} from "@/components/ui/empty";
+import { Folder } from "lucide-react";
 
 interface NewsItems {
   id: string;
@@ -123,9 +131,9 @@ export default function ResearchPage() {
   const formatDateForInput = (dateString: string): string => {
     try {
       const date = new Date(dateString);
-      return date.toISOString().split('T')[0];
+      return date.toISOString().split("T")[0];
     } catch {
-      return new Date().toISOString().split('T')[0];
+      return new Date().toISOString().split("T")[0];
     }
   };
 
@@ -303,9 +311,19 @@ export default function ResearchPage() {
           Уншиж байна ...
         </p>
       ) : currentItems.length === 0 ? (
-        <p className="text-center text-muted-foreground py-12">
-          Мэдээ олдсонгүй.
-        </p>
+        <div className="text-center text-muted-foreground py-12">
+          <Empty>
+            <EmptyHeader>
+              <EmptyMedia variant="icon">
+                <Folder />
+              </EmptyMedia>
+              <EmptyTitle>Мэдээ олдсонгүй.</EmptyTitle>
+              <EmptyDescription>
+                Та одоогоор ямар ч мэдээ үүсгээгүй байна.
+              </EmptyDescription>
+            </EmptyHeader>
+          </Empty>
+        </div>
       ) : (
         <>
           {/* Grid */}
@@ -364,11 +382,15 @@ export default function ResearchPage() {
                         </span>
                       </div>
                       <p className="text-xs text-muted-foreground mb-2">
-                        📅 {new Date(item.created_at).toLocaleDateString('mn-MN')}
+                        📅{" "}
+                        {new Date(item.created_at).toLocaleDateString("mn-MN")}
                       </p>
                       {item.updated_at && (
                         <p className="text-xs text-muted-foreground/70 mb-2">
-                          ✏️ {new Date(item.updated_at).toLocaleDateString('mn-MN')}
+                          ✏️{" "}
+                          {new Date(item.updated_at).toLocaleDateString(
+                            "mn-MN"
+                          )}
                         </p>
                       )}
                       <p className="text-sm text-muted-foreground line-clamp-3">
