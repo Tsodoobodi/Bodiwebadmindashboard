@@ -2,7 +2,8 @@ import type { Node as TiptapNode } from "@tiptap/pm/model"
 import { NodeSelection, Selection, TextSelection } from "@tiptap/pm/state"
 import type { Editor } from "@tiptap/react"
 
-export const MAX_FILE_SIZE = 10 * 1024 * 1024 
+// ✅ Хэмжээг 20MB болгон өөрчилсөн
+export const MAX_FILE_SIZE = 20 * 1024 * 1024 
 
 export const MAC_SYMBOLS: Record<string, string> = {
   mod: "⌘",
@@ -280,10 +281,10 @@ export function isNodeTypeSelected(
 /**
  * Compresses an image file to reduce its size
  * @param file The file to compress
+ * @param maxSizeMB Maximum size in MB (default: 10MB)
  * @returns Promise resolving to the compressed file
  */
-// lib/tiptap-utils.ts эсвэл шинэ файл үүсгэ
-export const compressImage = async (file: File, maxSizeMB: number = 5): Promise<File> => {
+export const compressImage = async (file: File, maxSizeMB: number = 10): Promise<File> => {
   return new Promise((resolve, reject) => {
     const reader = new FileReader();
     reader.readAsDataURL(file);
@@ -342,21 +343,22 @@ export const compressImage = async (file: File, maxSizeMB: number = 5): Promise<
   });
 };
 
-// handleImageUpload функцийг шинэчлэх
-// lib/tiptap-utils.ts
-
+/**
+ * Handles image upload with automatic compression for large files
+ * @param file The file to upload
+ * @returns Promise resolving to the uploaded image URL
+ */
 export const handleImageUpload = async (file: File): Promise<string> => {
-  // Зураг 5MB-аас их бол багасгана
+  // ✅ Зураг 10MB-аас их бол багасгана
   let uploadFile = file;
-  if (file.size > 5 * 1024 * 1024) {
-    uploadFile = await compressImage(file, 5);
+  if (file.size > 10 * 1024 * 1024) {
+    uploadFile = await compressImage(file, 10);
   }
   
   const formData = new FormData();
   formData.append('image', uploadFile);
 
   try {
-    // ✅ URL ӨӨРЧЛӨХ - /api/uploads → /api/images/upload
     const response = await fetch('https://bodi-backend-api.azurewebsites.net/api/images/upload', {
       method: 'POST',
       body: formData,
@@ -364,7 +366,6 @@ export const handleImageUpload = async (file: File): Promise<string> => {
 
     const data = await response.json();
     
-    // ✅ Response format засах
     if (data.success && data.url) {
       return data.url;
     }
@@ -375,6 +376,7 @@ export const handleImageUpload = async (file: File): Promise<string> => {
     throw error;
   }
 };
+
 type ProtocolOptions = {
   scheme: string
   optionalSlashes?: boolean
