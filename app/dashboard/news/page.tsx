@@ -654,11 +654,7 @@ export default function NewsPage() {
                 Болих
               </Button>
               <Button onClick={handleSave} disabled={saving}>
-                {saving
-                  ? "Хадгалж байна..."
-                  : editId
-                  ? "Шинэчлэх"
-                  : "Нэмэх"}
+                {saving ? "Хадгалж байна..." : editId ? "Шинэчлэх" : "Нэмэх"}
               </Button>
             </div>
           </div>
