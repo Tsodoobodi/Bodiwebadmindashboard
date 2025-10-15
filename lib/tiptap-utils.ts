@@ -344,15 +344,64 @@ export const compressImage = async (file: File, maxSizeMB: number = 10): Promise
 };
 
 /**
+ * Shows a user-friendly error notification
+ * @param message The error message to display
+ */
+const showError = (message: string) => {
+  alert(message);
+};
+
+/**
+ * Formats file size to human-readable format
+ * @param bytes File size in bytes
+ * @returns Formatted file size string
+ */
+const formatFileSize = (bytes: number): string => {
+  if (bytes < 1024) return bytes + ' bytes';
+  if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + ' KB';
+  return (bytes / (1024 * 1024)).toFixed(1) + ' MB';
+};
+
+/**
  * Handles image upload with automatic compression for large files
  * @param file The file to upload
  * @returns Promise resolving to the uploaded image URL
  */
 export const handleImageUpload = async (file: File): Promise<string> => {
-  // ✅ Зураг 10MB-аас их бол багасгана
+  // ✅ 20MB хязгаарлалт (MAX_FILE_SIZE ашиглах)
+  const MAX_SIZE_BYTES = MAX_FILE_SIZE; // 20MB
+  const MAX_SIZE_MB = 20;
+  
+  // Validation: File size check
+  if (file.size > MAX_SIZE_BYTES) {
+    const fileSize = formatFileSize(file.size);
+    showError(
+      `Зургийн хэмжээ их байна!\n\n` +
+      `Таны зураг: ${fileSize}\n` +
+      `Хамгийн их: ${MAX_SIZE_MB}MB\n\n` +
+      `Та жижиг зураг сонгоно уу.`
+    );
+    throw new Error(`File size ${fileSize} exceeds ${MAX_SIZE_MB}MB limit`);
+  }
+  
+  // Validation: File type check
+  const validTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/gif', 'image/webp'];
+  if (!validTypes.includes(file.type)) {
+    showError('Зөвхөн зураг файл оруулах боломжтой (JPG, PNG, GIF, WebP)');
+    throw new Error('Invalid file type');
+  }
+  
+  // Compress if larger than 15MB (before hitting 20MB limit)
   let uploadFile = file;
-  if (file.size > 10 * 1024 * 1024) {
-    uploadFile = await compressImage(file, 10);
+  if (file.size > 15 * 1024 * 1024) {
+    try {
+      uploadFile = await compressImage(file, 15);
+      console.log(`Compressed from ${formatFileSize(file.size)} to ${formatFileSize(uploadFile.size)}`);
+    } catch (error) {
+      console.error('Image compression failed:', error);
+      showError('Зургийг багасгахад алдаа гарлаа. Та жижиг зураг сонгоно уу.');
+      throw error;
+    }
   }
   
   const formData = new FormData();
@@ -364,6 +413,10 @@ export const handleImageUpload = async (file: File): Promise<string> => {
       body: formData,
     });
 
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`);
+    }
+
     const data = await response.json();
     
     if (data.success && data.url) {
@@ -373,6 +426,7 @@ export const handleImageUpload = async (file: File): Promise<string> => {
     throw new Error(data.message || 'Upload failed');
   } catch (error) {
     console.error('Image upload error:', error);
+    showError('Зураг оруулахад алдаа гарлаа. Дахин оролдоно уу.');
     throw error;
   }
 };
