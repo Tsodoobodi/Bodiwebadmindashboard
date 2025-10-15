@@ -81,7 +81,9 @@ export default function RndresearchPage() {
   const [newCreatedAt, setNewCreatedAt] = useState<string>("");
   const [editId, setEditId] = useState<string | null>(null);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
-  const [itemToDelete, setItemToDelete] = useState<RndresearchItem | null>(null);
+  const [itemToDelete, setItemToDelete] = useState<RndresearchItem | null>(
+    null
+  );
   const [errorMessage, setErrorMessage] = useState<string>("");
 
   const jsonToHTML = (json: Record<string, unknown>): string => {
