@@ -2,42 +2,45 @@
 import type { NextConfig } from 'next';
 
 const config: NextConfig = {
-  // ⭐⭐⭐ STATIC EXPORT - ЧУХАЛ! ⭐⭐⭐
+  // ⭐ STATIC EXPORT
   output: 'export',
   
-  // Image optimization идэвхгүй болгох
+  // ✅ Compiler optimizations
+  compiler: {
+    removeConsole: process.env.NODE_ENV === 'production',
+  },
+  
+  // ✅ Image optimization
   images: {
     unoptimized: true,
+    formats: ['image/webp'],
+    minimumCacheTTL: 60,
     remotePatterns: [
-      // Production backend
       {
         protocol: 'https',
         hostname: 'bodi-backend-api.azurewebsites.net',
         pathname: '/uploads/**',
       },
-      // YouTube thumbnails
       {
         protocol: 'https',
         hostname: 'img.youtube.com',
         pathname: '/vi/**',
       },
-      // Development backend
-      // {
-      //   protocol: 'http',
-      //   hostname: 'localhost',
-      //   port: '5001',
-      //   pathname: '/uploads/**',
-      // },
     ],
   },
   
-  // Environment variables
+  // ✅ Environment variables
   env: {
     NEXT_PUBLIC_API_URL: process.env.NEXT_PUBLIC_API_URL || 'https://bodi-backend-api.azurewebsites.net',
   },
   
-  // Trailing slash
+  // ✅ Trailing slash
   trailingSlash: true,
+  
+  // ✅ Production optimizations
+  productionBrowserSourceMaps: false, // Source maps үүсгэхгүй (bundle багасна)
+  poweredByHeader: false, // Security header
+  compress: true, // Gzip compression
 };
 
 export default config;
