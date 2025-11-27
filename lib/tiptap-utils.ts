@@ -408,7 +408,7 @@ export const handleImageUpload = async (file: File): Promise<string> => {
   formData.append('image', uploadFile);
 
   try {
-    const response = await fetch('https://bodi-backend-api.azurewebsites.net/api/images/upload', {
+    const response = await fetch('https://bodi-web-backend-bzf7bnh6csbvf0cp.eastasia-01.azurewebsites.net/api/images/upload', {
       method: 'POST',
       body: formData,
     });

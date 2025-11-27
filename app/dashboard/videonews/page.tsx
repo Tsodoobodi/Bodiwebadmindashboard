@@ -34,7 +34,7 @@ interface VideoNewsItem {
 
 const API_URL =
   process.env.NEXT_PUBLIC_API_URL ||
-  "https://bodi-backend-api.azurewebsites.net";
+  "https://bodi-web-backend-bzf7bnh6csbvf0cp.eastasia-01.azurewebsites.net";
 
 // YouTube Video ID гаргах
 const extractYouTubeId = (url: string): string | null => {

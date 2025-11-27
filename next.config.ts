@@ -18,7 +18,7 @@ const config: NextConfig = {
     remotePatterns: [
       {
         protocol: 'https',
-        hostname: 'bodi-backend-api.azurewebsites.net',
+        hostname: 'bodi-web-backend-bzf7bnh6csbvf0cp.eastasia-01.azurewebsites.net',
         pathname: '/uploads/**',
       },
       {
@@ -31,7 +31,7 @@ const config: NextConfig = {
   
   // ✅ Environment variables
   env: {
-    NEXT_PUBLIC_API_URL: process.env.NEXT_PUBLIC_API_URL || 'https://bodi-backend-api.azurewebsites.net',
+    NEXT_PUBLIC_API_URL: process.env.NEXT_PUBLIC_API_URL || 'https://bodi-web-backend-bzf7bnh6csbvf0cp.eastasia-01.azurewebsites.net',
   },
   
   // ✅ Trailing slash

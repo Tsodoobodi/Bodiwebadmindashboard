@@ -61,7 +61,7 @@ interface UpdatePayload {
 
 const API_URL =
   process.env.NEXT_PUBLIC_API_URL ||
-  "https://bodi-backend-api.azurewebsites.net";
+  "https://bodi-web-backend-bzf7bnh6csbvf0cp.eastasia-01.azurewebsites.net";
 
 const ITEMS_PER_PAGE = 9;
 

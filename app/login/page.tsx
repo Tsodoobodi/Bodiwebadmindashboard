@@ -32,7 +32,7 @@ export default function LoginForm() {
 
     try {
       const response = await fetch(
-        "https://bodi-backend-api.azurewebsites.net/api/login",
+        "https://bodi-web-backend-bzf7bnh6csbvf0cp.eastasia-01.azurewebsites.net/api/login",
         {
           method: "POST",
           headers: {
@@ -51,7 +51,7 @@ export default function LoginForm() {
 
         // ✅ Token хадгалсны дараа хамгаалалттай API дуудаж тест хийх
         const check = await fetch(
-          "https://bodi-backend-api.azurewebsites.net/api/protected",
+          "https://bodi-web-backend-bzf7bnh6csbvf0cp.eastasia-01.azurewebsites.net/api/protected",
           {
             headers: {
               Authorization: `Bearer ${data.token}`,

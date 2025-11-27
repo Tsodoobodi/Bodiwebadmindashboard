@@ -1,7 +1,7 @@
 import axios from 'axios';
 
 const api = axios.create({
-  baseURL: 'https://bodi-backend-api.azurewebsites.net' // ⬅️ Backend URL
+  baseURL: 'https://bodi-web-backend-bzf7bnh6csbvf0cp.eastasia-01.azurewebsites.net' // ⬅️ Backend URL
 });
 
 // Request interceptor - бүх request-д token нэмэх
