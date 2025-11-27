@@ -275,7 +275,7 @@ export default function NewsPage() {
   };
 
   const handleImageError = (e: React.SyntheticEvent<HTMLImageElement>) => {
-    e.currentTarget.src = "/placeholder-news.png";
+    e.currentTarget.src = "";
   };
 
   // Filter and sort with useMemo for performance
