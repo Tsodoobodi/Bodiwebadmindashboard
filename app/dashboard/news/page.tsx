@@ -79,6 +79,11 @@ export default function NewsPage() {
   const [newIsResearch, setNewIsResearch] = useState(true);
   const [newCreatedAt, setNewCreatedAt] = useState<string>("");
   const [editId, setEditId] = useState<string | null>(null);
+  
+  // ✅ Нэмэлт checkbox state-үүд
+  const [saveToRndPartner, setSaveToRndPartner] = useState(false);
+  const [saveToResearch, setSaveToResearch] = useState(false);
+  
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [itemToDelete, setItemToDelete] = useState<NewsItems | null>(null);
   const [currentPage, setCurrentPage] = useState(1);
@@ -106,7 +111,6 @@ export default function NewsPage() {
       setErrorMessage("");
       const res = await axios.get(`${API_URL}/api/news`);
 
-      // Validate response
       if (!res.data || (!res.data.data && !Array.isArray(res.data))) {
         throw new Error("Буруу хариу ирлээ");
       }
@@ -132,7 +136,6 @@ export default function NewsPage() {
     fetchResearch();
   }, [fetchResearch]);
 
-  // Modal escape key handler
   useEffect(() => {
     if (open) {
       const handleEscape = (e: KeyboardEvent) => {
@@ -145,7 +148,6 @@ export default function NewsPage() {
     }
   }, [open]);
 
-  // Auto-clear error message after 5 seconds
   useEffect(() => {
     if (errorMessage) {
       const timer = setTimeout(() => setErrorMessage(""), 5000);
@@ -233,12 +235,12 @@ export default function NewsPage() {
         is_research: newIsResearch,
       };
 
-      // Огноо өөрчилсөн бол payload-д нэмэх
       if (editId && newCreatedAt) {
         payload.created_at = new Date(newCreatedAt).toISOString();
       }
 
       if (editId) {
+        // ✅ Edit mode - зөвхөн /api/news шинэчлэнэ
         const res = await axios.put(`${API_URL}/api/news/${editId}`, payload);
         const updatedItem = res.data.data || res.data;
         setResearch(
@@ -250,13 +252,35 @@ export default function NewsPage() {
         );
         console.log("Мэдээ амжилттай шинэчлэгдлээ");
       } else {
+        // ✅ Create mode - үндсэн /api/news руу хадгална
         const res = await axios.post(`${API_URL}/api/news`, payload);
         const newItem = res.data.data || res.data;
         setResearch([{ ...newItem, contents: newContents }, ...research]);
         console.log("Шинэ мэдээ амжилттай нэмэгдлээ");
+
+        // ✅ Хамтын ажиллагаа checkbox checked бол /api/rndpartner руу бас хадгална
+        if (saveToRndPartner) {
+          try {
+            await axios.post(`${API_URL}/api/rndpartner`, payload);
+            console.log("✅ Мэдээ rndpartner руу амжилттай нэмэгдлээ");
+          } catch (error) {
+            console.error("RndPartner save error:", error);
+            setErrorMessage("Хамтын ажиллагаа хэсэгт хадгалахад алдаа гарлаа");
+          }
+        }
+
+        // ✅ Судалгаа checkbox checked бол /api/research руу бас хадгална
+        if (saveToResearch) {
+          try {
+            await axios.post(`${API_URL}/api/research`, payload);
+            console.log("✅ Мэдээ research руу амжилттай нэмэгдлээ");
+          } catch (error) {
+            console.error("Research save error:", error);
+            setErrorMessage("Судалгаа хэсэгт хадгалахад алдаа гарлаа");
+          }
+        }
       }
 
-      // Reset form
       resetModal();
     } catch (err) {
       console.error("Save error:", err);
@@ -278,7 +302,6 @@ export default function NewsPage() {
     e.currentTarget.src = "";
   };
 
-  // Filter and sort with useMemo for performance
   const filteredResearch = useMemo(() => {
     let filtered = research;
 
@@ -308,7 +331,6 @@ export default function NewsPage() {
     return sorted;
   }, [research, query, statusFilter, dateSort]);
 
-  // Pagination logic
   const totalPages = Math.ceil(filteredResearch.length / ITEMS_PER_PAGE);
   const startIndex = (currentPage - 1) * ITEMS_PER_PAGE;
   const endIndex = startIndex + ITEMS_PER_PAGE;
@@ -332,6 +354,9 @@ export default function NewsPage() {
     setNewPosition(false);
     setNewIsResearch(true);
     setNewCreatedAt("");
+    // ✅ Нэмэлт checkbox-үүдийг reset хийх
+    setSaveToRndPartner(false);
+    setSaveToResearch(false);
   };
 
   const openNewModal = () => {
@@ -352,14 +377,12 @@ export default function NewsPage() {
 
   return (
     <div className="flex flex-col gap-6">
-      {/* Error Message Banner */}
       {errorMessage && (
         <div className="bg-destructive/10 border border-destructive text-destructive px-4 py-3 rounded-lg">
           <p className="text-sm font-medium">{errorMessage}</p>
         </div>
       )}
 
-      {/* Search and Filters */}
       <div className="flex flex-col gap-4">
         <div className="flex gap-4 items-center flex-wrap">
           <Input
@@ -404,7 +427,6 @@ export default function NewsPage() {
         </p>
       </div>
 
-      {/* Content */}
       {loading ? (
         <p className="text-center text-muted-foreground py-12">
           Уншиж байна ...
@@ -425,7 +447,6 @@ export default function NewsPage() {
         </div>
       ) : (
         <>
-          {/* Grid */}
           <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
             {currentItems.map((item) => {
               const htmlContent =
@@ -522,7 +543,6 @@ export default function NewsPage() {
             })}
           </div>
 
-          {/* Pagination */}
           {totalPages > 1 && (
             <div className="flex justify-center items-center gap-2 mt-8">
               <Button
@@ -626,6 +646,38 @@ export default function NewsPage() {
                   <Label htmlFor="position">Онцолсон</Label>
                 </div>
 
+                {/* ✅ Шинэ checkbox: Хамтын ажиллагаа - Зөвхөн шинэ мэдээ үед харуулна */}
+                {!editId && (
+                  <div className="flex items-center space-x-2">
+                    <Checkbox
+                      id="saveToRndPartner"
+                      checked={saveToRndPartner}
+                      onCheckedChange={(checked) =>
+                        setSaveToRndPartner(checked as boolean)
+                      }
+                    />
+                    <Label htmlFor="saveToRndPartner" className="text-sm font-medium">
+                      Түншлэл Хамтын ажиллагаа
+                    </Label>
+                  </div>
+                )}
+
+                {/* ✅ Шинэ checkbox: Судалгаа, нийтлэлүүд - Зөвхөн шинэ мэдээ үед харуулна */}
+                {!editId && (
+                  <div className="flex items-center space-x-2">
+                    <Checkbox
+                      id="saveToResearch"
+                      checked={saveToResearch}
+                      onCheckedChange={(checked) =>
+                        setSaveToResearch(checked as boolean)
+                      }
+                    />
+                    <Label htmlFor="saveToResearch" className="text-sm font-medium">
+                      Хэлэлцүүлэг, арга хэмжээ
+                    </Label>
+                  </div>
+                )}
+
                 {editId && (
                   <div className="flex items-center gap-2">
                     <Label htmlFor="date" className="text-sm whitespace-nowrap">
@@ -661,7 +713,6 @@ export default function NewsPage() {
         </div>
       )}
 
-      {/* Delete Confirmation Dialog */}
       <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
         <AlertDialogContent>
           <AlertDialogHeader>
