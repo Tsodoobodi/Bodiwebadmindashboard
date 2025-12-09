@@ -1,9 +1,13 @@
-// next.config.ts
 import type { NextConfig } from 'next';
 
 const config: NextConfig = {
   // ⭐ STATIC EXPORT
   output: 'export',
+  
+  // ✅ SCSS support (auto-enabled when sass is installed)
+  sassOptions: {
+    includePaths: ['./styles'],
+  },
   
   // ✅ Compiler optimizations
   compiler: {
@@ -38,9 +42,9 @@ const config: NextConfig = {
   trailingSlash: true,
   
   // ✅ Production optimizations
-  productionBrowserSourceMaps: false, // Source maps үүсгэхгүй (bundle багасна)
-  poweredByHeader: false, // Security header
-  compress: true, // Gzip compression
+  productionBrowserSourceMaps: false,
+  poweredByHeader: false,
+  compress: true,
 };
 
 export default config;
