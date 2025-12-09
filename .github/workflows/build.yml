@@ -20,9 +20,14 @@ jobs:
           cache: 'npm'
       
       - name: Install dependencies
-        run: npm ci
+        run: |
+          npm ci --force
+          # OR if that fails:
+          # rm -rf node_modules package-lock.json
+          # npm install --force
       
       - name: Build
         run: npm run build
         env:
           NODE_ENV: production
+          NEXT_PUBLIC_API_URL: ${{ secrets.NEXT_PUBLIC_API_URL }}

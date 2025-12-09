@@ -1,7 +1,6 @@
 "use client";
 
 import { useEffect, useState, useCallback, useMemo } from "react";
-import Image from "next/image";
 import React from "react";
 import axios from "axios";
 import { Button } from "@/components/ui/button";
