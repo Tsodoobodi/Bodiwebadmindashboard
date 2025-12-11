@@ -43,6 +43,7 @@ interface NewsItems {
   viewers: number;
   position: boolean;
   is_research: boolean;
+  language: string; // ✅ Added
   created_at: string;
   updated_at?: string;
 }
@@ -56,6 +57,7 @@ interface UpdatePayload {
   status: boolean;
   position: boolean;
   is_research: boolean;
+  language: string; // ✅ Added
   created_at?: string;
 }
 
@@ -77,17 +79,18 @@ export default function NewsPage() {
   const [newStatus, setNewStatus] = useState(true);
   const [newPosition, setNewPosition] = useState(false);
   const [newIsResearch, setNewIsResearch] = useState(true);
+  const [newLanguage, setNewLanguage] = useState<string>("mn"); // ✅ Added
   const [newCreatedAt, setNewCreatedAt] = useState<string>("");
   const [editId, setEditId] = useState<string | null>(null);
-  
-  // ✅ Нэмэлт checkbox state-үүд
+
   const [saveToRndPartner, setSaveToRndPartner] = useState(false);
   const [saveToResearch, setSaveToResearch] = useState(false);
-  
+
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [itemToDelete, setItemToDelete] = useState<NewsItems | null>(null);
   const [currentPage, setCurrentPage] = useState(1);
   const [statusFilter, setStatusFilter] = useState<string>("all");
+  const [languageFilter, setLanguageFilter] = useState<string>("all"); // ✅ Added
   const [dateSort, setDateSort] = useState<string>("newest");
   const [errorMessage, setErrorMessage] = useState<string>("");
 
@@ -233,6 +236,7 @@ export default function NewsPage() {
         status: newStatus,
         position: newPosition,
         is_research: newIsResearch,
+        language: newLanguage, // ✅ Added
       };
 
       if (editId && newCreatedAt) {
@@ -240,7 +244,6 @@ export default function NewsPage() {
       }
 
       if (editId) {
-        // ✅ Edit mode - зөвхөн /api/news шинэчлэнэ
         const res = await axios.put(`${API_URL}/api/news/${editId}`, payload);
         const updatedItem = res.data.data || res.data;
         setResearch(
@@ -252,13 +255,11 @@ export default function NewsPage() {
         );
         console.log("Мэдээ амжилттай шинэчлэгдлээ");
       } else {
-        // ✅ Create mode - үндсэн /api/news руу хадгална
         const res = await axios.post(`${API_URL}/api/news`, payload);
         const newItem = res.data.data || res.data;
         setResearch([{ ...newItem, contents: newContents }, ...research]);
         console.log("Шинэ мэдээ амжилттай нэмэгдлээ");
 
-        // ✅ Хамтын ажиллагаа checkbox checked бол /api/rndpartner руу бас хадгална
         if (saveToRndPartner) {
           try {
             await axios.post(`${API_URL}/api/rndpartner`, payload);
@@ -269,7 +270,6 @@ export default function NewsPage() {
           }
         }
 
-        // ✅ Судалгаа checkbox checked бол /api/research руу бас хадгална
         if (saveToResearch) {
           try {
             await axios.post(`${API_URL}/api/research`, payload);
@@ -317,6 +317,13 @@ export default function NewsPage() {
       filtered = filtered.filter((item) => item.status === false);
     }
 
+    // ✅ Language filter
+    if (languageFilter === "mn") {
+      filtered = filtered.filter((item) => item.language === "mn");
+    } else if (languageFilter === "en") {
+      filtered = filtered.filter((item) => item.language === "en");
+    }
+
     const sorted = [...filtered].sort((a, b) => {
       const dateA = new Date(a.created_at).getTime();
       const dateB = new Date(b.created_at).getTime();
@@ -329,7 +336,7 @@ export default function NewsPage() {
     });
 
     return sorted;
-  }, [research, query, statusFilter, dateSort]);
+  }, [research, query, statusFilter, languageFilter, dateSort]);
 
   const totalPages = Math.ceil(filteredResearch.length / ITEMS_PER_PAGE);
   const startIndex = (currentPage - 1) * ITEMS_PER_PAGE;
@@ -338,7 +345,7 @@ export default function NewsPage() {
 
   useEffect(() => {
     setCurrentPage(1);
-  }, [query, statusFilter, dateSort]);
+  }, [query, statusFilter, languageFilter, dateSort]);
 
   const goToPage = (page: number) => {
     setCurrentPage(page);
@@ -353,8 +360,8 @@ export default function NewsPage() {
     setNewStatus(true);
     setNewPosition(false);
     setNewIsResearch(true);
+    setNewLanguage("mn"); // ✅ Reset to default
     setNewCreatedAt("");
-    // ✅ Нэмэлт checkbox-үүдийг reset хийх
     setSaveToRndPartner(false);
     setSaveToResearch(false);
   };
@@ -372,6 +379,7 @@ export default function NewsPage() {
     setNewStatus(item.status);
     setNewPosition(item.position);
     setNewIsResearch(item.is_research);
+    setNewLanguage(item.language || "mn"); // ✅ Load existing language
     setNewCreatedAt(formatDateForInput(item.created_at));
   };
 
@@ -390,12 +398,12 @@ export default function NewsPage() {
             placeholder="Мэдээ хайх ..."
             value={query}
             onChange={(e) => setQuery(e.target.value)}
-            className="w-full md:w-[400px]"
+            className="w-full md:w-[300px]"
           />
 
           <Select value={statusFilter} onValueChange={setStatusFilter}>
-            <SelectTrigger className="w-full md:w-[180px]">
-              <SelectValue placeholder="Төлөв сонгох" />
+            <SelectTrigger className="w-full md:w-[140px]">
+              <SelectValue placeholder="Төлөв" />
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="all">Бүгд</SelectItem>
@@ -404,13 +412,25 @@ export default function NewsPage() {
             </SelectContent>
           </Select>
 
+          {/* ✅ Language Filter */}
+          <Select value={languageFilter} onValueChange={setLanguageFilter}>
+            <SelectTrigger className="w-full md:w-[140px]">
+              <SelectValue placeholder="Хэл" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">Бүх хэл</SelectItem>
+              <SelectItem value="mn">🇲🇳 Монгол</SelectItem>
+              <SelectItem value="en">🇬🇧 English</SelectItem>
+            </SelectContent>
+          </Select>
+
           <Select value={dateSort} onValueChange={setDateSort}>
-            <SelectTrigger className="w-full md:w-[180px]">
+            <SelectTrigger className="w-full md:w-[160px]">
               <SelectValue placeholder="Эрэмбэлэх" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="newest">Шинээс хуучин</SelectItem>
-              <SelectItem value="oldest">Хуучнаас шинэ</SelectItem>
+              <SelectItem value="newest">Шинэ → Хуучин</SelectItem>
+              <SelectItem value="oldest">Хуучин → Шинэ</SelectItem>
             </SelectContent>
           </Select>
 
@@ -477,6 +497,16 @@ export default function NewsPage() {
                         <h3 className="font-semibold truncate flex-1">
                           {item.title}
                         </h3>
+                        {/* ✅ Show language badge */}
+                        <span
+                          className={`text-xs px-2 py-1 rounded ${
+                            item.language === "mn"
+                              ? "bg-blue-100 text-blue-700"
+                              : "bg-green-100 text-green-700"
+                          }`}
+                        >
+                          {item.language === "mn" ? "🇲🇳 MN" : "🇬🇧 EN"}
+                        </span>
                         {item.position && (
                           <span className="text-xs bg-yellow-500 text-white px-2 py-1 rounded">
                             ⭐
@@ -622,6 +652,25 @@ export default function NewsPage() {
               />
 
               <div className="flex flex-wrap gap-6">
+                {/* ✅ Language Selector */}
+                <div className="flex items-center gap-2">
+                  <Label
+                    htmlFor="language"
+                    className="text-sm whitespace-nowrap font-medium"
+                  >
+                    🌐 Хэл:
+                  </Label>
+                  <Select value={newLanguage} onValueChange={setNewLanguage}>
+                    <SelectTrigger className="w-[150px]">
+                      <SelectValue placeholder="Хэл сонгох" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="mn">🇲🇳 Монгол</SelectItem>
+                      <SelectItem value="en">🇬🇧 English</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+
                 <div className="flex items-center space-x-2">
                   <Checkbox
                     id="status"
@@ -646,36 +695,40 @@ export default function NewsPage() {
                   <Label htmlFor="position">Онцолсон</Label>
                 </div>
 
-                {/* ✅ Шинэ checkbox: Хамтын ажиллагаа - Зөвхөн шинэ мэдээ үед харуулна */}
                 {!editId && (
-                  <div className="flex items-center space-x-2">
-                    <Checkbox
-                      id="saveToRndPartner"
-                      checked={saveToRndPartner}
-                      onCheckedChange={(checked) =>
-                        setSaveToRndPartner(checked as boolean)
-                      }
-                    />
-                    <Label htmlFor="saveToRndPartner" className="text-sm font-medium">
-                      Түншлэл Хамтын ажиллагаа
-                    </Label>
-                  </div>
-                )}
+                  <>
+                    <div className="flex items-center space-x-2">
+                      <Checkbox
+                        id="saveToRndPartner"
+                        checked={saveToRndPartner}
+                        onCheckedChange={(checked) =>
+                          setSaveToRndPartner(checked as boolean)
+                        }
+                      />
+                      <Label
+                        htmlFor="saveToRndPartner"
+                        className="text-sm font-medium"
+                      >
+                        Түншлэл Хамтын ажиллагаа
+                      </Label>
+                    </div>
 
-                {/* ✅ Шинэ checkbox: Судалгаа, нийтлэлүүд - Зөвхөн шинэ мэдээ үед харуулна */}
-                {!editId && (
-                  <div className="flex items-center space-x-2">
-                    <Checkbox
-                      id="saveToResearch"
-                      checked={saveToResearch}
-                      onCheckedChange={(checked) =>
-                        setSaveToResearch(checked as boolean)
-                      }
-                    />
-                    <Label htmlFor="saveToResearch" className="text-sm font-medium">
-                      Хэлэлцүүлэг, арга хэмжээ
-                    </Label>
-                  </div>
+                    <div className="flex items-center space-x-2">
+                      <Checkbox
+                        id="saveToResearch"
+                        checked={saveToResearch}
+                        onCheckedChange={(checked) =>
+                          setSaveToResearch(checked as boolean)
+                        }
+                      />
+                      <Label
+                        htmlFor="saveToResearch"
+                        className="text-sm font-medium"
+                      >
+                        Хэлэлцүүлэг, арга хэмжээ
+                      </Label>
+                    </div>
+                  </>
                 )}
 
                 {editId && (
