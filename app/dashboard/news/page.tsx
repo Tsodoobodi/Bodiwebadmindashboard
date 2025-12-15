@@ -220,75 +220,98 @@ export default function NewsPage() {
     return true;
   };
 
-  const handleSave = async () => {
-    if (!validateForm()) return;
+ const handleSave = async () => {
+  if (!validateForm()) return;
 
-    try {
-      setSaving(true);
-      setErrorMessage("");
+  try {
+    setSaving(true);
+    setErrorMessage("");
 
-      const payload: UpdatePayload = {
-        title: newTitle.trim(),
-        contents: {
-          type: "doc",
-          content: [{ type: "html", html: newContents }],
-        },
-        status: newStatus,
-        position: newPosition,
-        is_research: newIsResearch,
-        language: newLanguage, // ✅ Added
-      };
+    const payload: UpdatePayload = {
+      title: newTitle.trim(),
+      contents: {
+        type: "doc",
+        content: [{ type: "html", html: newContents }],
+      },
+      status: newStatus,
+      position: newPosition,
+      is_research: newIsResearch,
+      language: newLanguage,
+    };
 
-      if (editId && newCreatedAt) {
-        payload.created_at = new Date(newCreatedAt).toISOString();
-      }
-
-      if (editId) {
-        const res = await axios.put(`${API_URL}/api/news/${editId}`, payload);
-        const updatedItem = res.data.data || res.data;
-        setResearch(
-          research.map((item) =>
-            item.id === editId
-              ? { ...updatedItem, contents: newContents }
-              : item
-          )
-        );
-        console.log("Мэдээ амжилттай шинэчлэгдлээ");
-      } else {
-        const res = await axios.post(`${API_URL}/api/news`, payload);
-        const newItem = res.data.data || res.data;
-        setResearch([{ ...newItem, contents: newContents }, ...research]);
-        console.log("Шинэ мэдээ амжилттай нэмэгдлээ");
-
-        if (saveToRndPartner) {
-          try {
-            await axios.post(`${API_URL}/api/rndpartner`, payload);
-            console.log("✅ Мэдээ rndpartner руу амжилттай нэмэгдлээ");
-          } catch (error) {
-            console.error("RndPartner save error:", error);
-            setErrorMessage("Хамтын ажиллагаа хэсэгт хадгалахад алдаа гарлаа");
-          }
-        }
-
-        if (saveToResearch) {
-          try {
-            await axios.post(`${API_URL}/api/research`, payload);
-            console.log("✅ Мэдээ research руу амжилттай нэмэгдлээ");
-          } catch (error) {
-            console.error("Research save error:", error);
-            setErrorMessage("Судалгаа хэсэгт хадгалахад алдаа гарлаа");
-          }
-        }
-      }
-
-      resetModal();
-    } catch (err) {
-      console.error("Save error:", err);
-      setErrorMessage("Мэдээ хадгалахад алдаа гарлаа.");
-    } finally {
-      setSaving(false);
+    if (editId && newCreatedAt) {
+      payload.created_at = new Date(newCreatedAt).toISOString();
     }
-  };
+
+    if (editId) {
+      // ✅ Update main news
+      const res = await axios.put(`${API_URL}/api/news/${editId}`, payload);
+      const updatedItem = res.data.data || res.data;
+      setResearch(
+        research.map((item) =>
+          item.id === editId
+            ? { ...updatedItem, contents: newContents }
+            : item
+        )
+      );
+      console.log("Мэдээ амжилттай шинэчлэгдлээ");
+
+      // ✅ Edit үед ч save хийх
+      if (saveToRndPartner) {
+        try {
+          await axios.post(`${API_URL}/api/rndpartner`, payload);
+          console.log("✅ Мэдээ rndpartner руу амжилттай нэмэгдлээ");
+        } catch (error) {
+          console.error("RndPartner save error:", error);
+          setErrorMessage("Хамтын ажиллагаа хэсэгт хадгалахад алдаа гарлаа");
+        }
+      }
+
+      if (saveToResearch) {
+        try {
+          await axios.post(`${API_URL}/api/research`, payload);
+          console.log("✅ Мэдээ research руу амжилттай нэмэгдлээ");
+        } catch (error) {
+          console.error("Research save error:", error);
+          setErrorMessage("Судалгаа хэсэгт хадгалахад алдаа гарлаа");
+        }
+      }
+    } else {
+      // Create new
+      const res = await axios.post(`${API_URL}/api/news`, payload);
+      const newItem = res.data.data || res.data;
+      setResearch([{ ...newItem, contents: newContents }, ...research]);
+      console.log("Шинэ мэдээ амжилттай нэмэгдлээ");
+
+      if (saveToRndPartner) {
+        try {
+          await axios.post(`${API_URL}/api/rndpartner`, payload);
+          console.log("✅ Мэдээ rndpartner руу амжилттай нэмэгдлээ");
+        } catch (error) {
+          console.error("RndPartner save error:", error);
+          setErrorMessage("Хамтын ажиллагаа хэсэгт хадгалахад алдаа гарлаа");
+        }
+      }
+
+      if (saveToResearch) {
+        try {
+          await axios.post(`${API_URL}/api/research`, payload);
+          console.log("✅ Мэдээ research руу амжилттай нэмэгдлээ");
+        } catch (error) {
+          console.error("Research save error:", error);
+          setErrorMessage("Судалгаа хэсэгт хадгалахад алдаа гарлаа");
+        }
+      }
+    }
+
+    resetModal();
+  } catch (err) {
+    console.error("Save error:", err);
+    setErrorMessage("Мэдээ хадгалахад алдаа гарлаа.");
+  } finally {
+    setSaving(false);
+  }
+};
 
   const handleTitleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setNewTitle(e.target.value);
@@ -425,7 +448,7 @@ export default function NewsPage() {
           </Select>
 
           <Select value={dateSort} onValueChange={setDateSort}>
-            <SelectTrigger className="w-full md:w-[160px]">
+            <SelectTrigger className="w-full md:w-40">
               <SelectValue placeholder="Эрэмбэлэх" />
             </SelectTrigger>
             <SelectContent>
@@ -695,41 +718,38 @@ export default function NewsPage() {
                   <Label htmlFor="position">Онцолсон</Label>
                 </div>
 
-                {!editId && (
-                  <>
-                    <div className="flex items-center space-x-2">
-                      <Checkbox
-                        id="saveToRndPartner"
-                        checked={saveToRndPartner}
-                        onCheckedChange={(checked) =>
-                          setSaveToRndPartner(checked as boolean)
-                        }
-                      />
-                      <Label
-                        htmlFor="saveToRndPartner"
-                        className="text-sm font-medium"
-                      >
-                        Түншлэл Хамтын ажиллагаа
-                      </Label>
-                    </div>
+                {/* ✅ Checkbox-ууд editId байхад ч харагдана */}
+                <div className="flex items-center space-x-2">
+                  <Checkbox
+                    id="saveToRndPartner"
+                    checked={saveToRndPartner}
+                    onCheckedChange={(checked) =>
+                      setSaveToRndPartner(checked as boolean)
+                    }
+                  />
+                  <Label
+                    htmlFor="saveToRndPartner"
+                    className="text-sm font-medium"
+                  >
+                    Түншлэл Хамтын ажиллагаа
+                  </Label>
+                </div>
 
-                    <div className="flex items-center space-x-2">
-                      <Checkbox
-                        id="saveToResearch"
-                        checked={saveToResearch}
-                        onCheckedChange={(checked) =>
-                          setSaveToResearch(checked as boolean)
-                        }
-                      />
-                      <Label
-                        htmlFor="saveToResearch"
-                        className="text-sm font-medium"
-                      >
-                        Хэлэлцүүлэг, арга хэмжээ
-                      </Label>
-                    </div>
-                  </>
-                )}
+                <div className="flex items-center space-x-2">
+                  <Checkbox
+                    id="saveToResearch"
+                    checked={saveToResearch}
+                    onCheckedChange={(checked) =>
+                      setSaveToResearch(checked as boolean)
+                    }
+                  />
+                  <Label
+                    htmlFor="saveToResearch"
+                    className="text-sm font-medium"
+                  >
+                    Судалгаа, нийтлэлүүд
+                  </Label>
+                </div>
 
                 {editId && (
                   <div className="flex items-center gap-2">
