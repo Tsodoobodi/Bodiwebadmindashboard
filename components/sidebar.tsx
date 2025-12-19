@@ -4,7 +4,14 @@ import Link from "next/link";
 import { motion, AnimatePresence } from "framer-motion";
 import { usePathname } from "next/navigation";
 import { useState, useEffect } from "react";
-import { Newspaper, Video, ChevronDown, Book, Users } from "lucide-react";
+import {
+  Newspaper,
+  Video,
+  ChevronDown,
+  Book,
+  Users,
+  ClipboardList,
+} from "lucide-react"; // ← ClipboardList нэмэх
 import Image from "next/image";
 
 const menu = [
@@ -12,6 +19,7 @@ const menu = [
   { label: "Видео мэдээ", icon: Video, href: "/dashboard/videonews" },
   { label: "Бонз", icon: Book },
   { label: "RnD", icon: Users },
+  { label: "Санал асуулага", icon: ClipboardList, href: "/dashboard/survey" }, // ← Шинэ цэс
 ];
 
 const bonzSubMenu = [
@@ -60,7 +68,7 @@ export default function Sidebar() {
 
   if (!mounted) {
     return (
-      <aside className="w-64 h-screen bg-gradient-to-b from-white to-gray-50/80 backdrop-blur-md p-6 flex flex-col gap-6 shadow-2xl border-r border-gray-200/50">
+      <aside className="w-64 h-screen bg-linear-to-b from-white to-gray-50/80 backdrop-blur-md p-6 flex flex-col gap-6 shadow-2xl border-r border-gray-200/50">
         <div className="flex items-center justify-center mb-4">
           <Image
             src="/images/mainlogo.png"
@@ -87,7 +95,7 @@ export default function Sidebar() {
         </nav>
         <div className="mt-auto pt-6 border-t border-gray-200 text-center text-sm text-gray-400">
           © 2025{" "}
-          <span className="font-bold text-transparent bg-clip-text bg-gradient-to-r from-blue-600 to-blue-800">
+          <span className="font-bold text-transparent bg-clip-text bg-linear-to-r from-blue-600 to-blue-800">
             Bodi Group
           </span>
         </div>
@@ -100,7 +108,7 @@ export default function Sidebar() {
       initial={{ x: -280 }}
       animate={{ x: 0 }}
       transition={{ type: "spring", stiffness: 80, damping: 20 }}
-      className="w-64 h-screen bg-gradient-to-b from-white to-gray-50/80 backdrop-blur-md p-6 flex flex-col gap-6 shadow-2xl border-r border-gray-200/50 relative overflow-y-auto"
+      className="w-64 h-screen bg-linear-to-b from-white to-gray-50/80 backdrop-blur-md p-6 flex flex-col gap-6 shadow-2xl border-r border-gray-200/50 relative overflow-y-auto"
     >
       <div className="flex items-center justify-center mb-4">
         <motion.div
@@ -143,8 +151,8 @@ export default function Sidebar() {
                   whileTap={{ scale: 0.98 }}
                   className={`flex items-center justify-between px-4 py-3 rounded-xl w-full text-left transition-all duration-300 group ${
                     isActiveParent
-                      ? "bg-gradient-to-r from-blue-500 to-blue-600 text-white shadow-lg shadow-blue-500/30"
-                      : "text-gray-700 hover:bg-gradient-to-r hover:from-gray-100 hover:to-gray-50 hover:shadow-md"
+                      ? "bg-linear-to-r from-blue-500 to-blue-600 text-white shadow-lg shadow-blue-500/30"
+                      : "text-gray-700 hover:bg-linear-to-r hover:from-gray-100 hover:to-gray-50 hover:shadow-md"
                   }`}
                 >
                   <div className="flex items-center gap-3">
@@ -181,7 +189,6 @@ export default function Sidebar() {
                       className="flex flex-col ml-4 mt-2 gap-1 overflow-hidden pl-2"
                     >
                       {subMenuItems.map((sub) => {
-                        // Exact match эсвэл startsWith шалгах
                         const activeSub =
                           pathname === sub.href ||
                           pathname.startsWith(sub.href + "/");
@@ -196,12 +203,12 @@ export default function Sidebar() {
                               href={sub.href}
                               className={`px-4 py-2.5 rounded-xl block transition-all duration-300 relative overflow-hidden group font-semibold ${
                                 activeSub
-                                  ? "bg-gradient-to-r from-blue-500 to-blue-600 text-white shadow-lg shadow-blue-500/30"
+                                  ? "bg-linear-to-r from-blue-500 to-blue-600 text-white shadow-lg shadow-blue-500/30"
                                   : "text-gray-600 hover:bg-gray-50 hover:text-blue-600"
                               }`}
                             >
                               <span
-                                className={`absolute inset-0 bg-gradient-to-r from-blue-50 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 ${
+                                className={`absolute inset-0 bg-linear-to-r from-blue-50 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 ${
                                   activeSub ? "hidden" : ""
                                 }`}
                               ></span>
@@ -238,12 +245,12 @@ export default function Sidebar() {
                 href={item.href ?? "#"}
                 className={`flex items-center gap-3 px-4 py-3 rounded-xl font-semibold transition-all duration-300 group relative overflow-hidden ${
                   activeTop
-                    ? "bg-gradient-to-r from-blue-500 to-blue-600 text-white shadow-lg shadow-blue-500/30"
-                    : "text-gray-700 hover:bg-gradient-to-r hover:from-gray-100 hover:to-gray-50 hover:shadow-md"
+                    ? "bg-linear-to-r from-blue-500 to-blue-600 text-white shadow-lg shadow-blue-500/30"
+                    : "text-gray-700 hover:bg-linear-to-r hover:from-gray-100 hover:to-gray-50 hover:shadow-md"
                 }`}
               >
                 <span
-                  className={`absolute inset-0 bg-gradient-to-r from-blue-50 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 ${
+                  className={`absolute inset-0 bg-linear-to-r from-blue-50 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 ${
                     activeTop ? "hidden" : ""
                   }`}
                 ></span>
@@ -270,7 +277,7 @@ export default function Sidebar() {
         whileHover={{ scale: 1.02 }}
       >
         © 2025{" "}
-        <span className="font-bold text-transparent bg-clip-text bg-gradient-to-r from-blue-600 to-blue-800">
+        <span className="font-bold text-transparent bg-clip-text bg-linear-to-r from-blue-600 to-blue-800">
           Bodi Group
         </span>
       </motion.div>
