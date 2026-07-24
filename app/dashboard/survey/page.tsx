@@ -6,27 +6,140 @@ import { Plus, ExternalLink, Trash2, Edit2, Link as LinkIcon, Eye, X, RefreshCw,
 import { motion, AnimatePresence } from 'framer-motion';
 import { surveyApi, Survey, SurveyStats } from '@/lib/surveyApi';
 
+const ITEMS_PER_PAGE = 9;
+
+function Pagination({
+  currentPage,
+  totalPages,
+  onPageChange,
+}: {
+  currentPage: number;
+  totalPages: number;
+  onPageChange: (page: number) => void;
+}) {
+  const [jumpValue, setJumpValue] = useState('');
+
+  const pageNumbers = Array.from({ length: totalPages }, (_, i) => i + 1)
+    .filter((p) => p === 1 || p === totalPages || Math.abs(p - currentPage) <= 1)
+    .reduce<(number | '...')[]>((acc, p, idx, arr) => {
+      if (idx > 0 && p - (arr[idx - 1] as number) > 1) acc.push('...');
+      acc.push(p);
+      return acc;
+    }, []);
+
+  const handleJump = () => {
+    const page = parseInt(jumpValue, 10);
+    if (!isNaN(page) && page >= 1 && page <= totalPages) {
+      onPageChange(page);
+      setJumpValue('');
+    }
+  };
+
+  if (totalPages <= 1) return null;
+
+  return (
+    <div className="flex flex-wrap items-center justify-center gap-2 pt-8">
+      <button
+        onClick={() => onPageChange(1)}
+        disabled={currentPage === 1}
+        className="px-3 py-1.5 rounded-lg text-sm font-semibold bg-gray-100 hover:bg-gray-200 text-gray-700 disabled:opacity-40 transition"
+      >
+        Эхлэл
+      </button>
+      <button
+        onClick={() => onPageChange(currentPage - 1)}
+        disabled={currentPage === 1}
+        className="px-3 py-1.5 rounded-lg text-sm font-semibold bg-gray-100 hover:bg-gray-200 text-gray-700 disabled:opacity-40 transition"
+      >
+        Өмнөх
+      </button>
+
+      <div className="flex items-center gap-1">
+        {pageNumbers.map((p, idx) =>
+          p === '...' ? (
+            <span key={`ellipsis-${idx}`} className="px-2 text-sm text-gray-400">
+              ...
+            </span>
+          ) : (
+            <button
+              key={p}
+              onClick={() => onPageChange(p as number)}
+              className={`w-9 h-9 rounded-lg text-sm font-semibold transition ${
+                p === currentPage
+                  ? 'bg-blue-600 text-white'
+                  : 'bg-gray-100 hover:bg-gray-200 text-gray-700'
+              }`}
+            >
+              {p}
+            </button>
+          )
+        )}
+      </div>
+
+      <button
+        onClick={() => onPageChange(currentPage + 1)}
+        disabled={currentPage === totalPages}
+        className="px-3 py-1.5 rounded-lg text-sm font-semibold bg-gray-100 hover:bg-gray-200 text-gray-700 disabled:opacity-40 transition"
+      >
+        Дараагийн
+      </button>
+      <button
+        onClick={() => onPageChange(totalPages)}
+        disabled={currentPage === totalPages}
+        className="px-3 py-1.5 rounded-lg text-sm font-semibold bg-gray-100 hover:bg-gray-200 text-gray-700 disabled:opacity-40 transition"
+      >
+        Төгсгөл
+      </button>
+
+      <div className="flex items-center gap-1.5 ml-2 pl-3 border-l border-gray-200">
+        <span className="text-xs text-gray-500 whitespace-nowrap">Хуудас:</span>
+        <input
+          type="number"
+          min={1}
+          max={totalPages}
+          value={jumpValue}
+          onChange={(e) => setJumpValue(e.target.value)}
+          onKeyDown={(e) => e.key === 'Enter' && handleJump()}
+          placeholder={`${currentPage}`}
+          className="w-14 h-8 text-xs text-center rounded-lg border border-gray-200 outline-none focus:border-blue-500"
+        />
+        <span className="text-xs text-gray-500">/ {totalPages}</span>
+        <button
+          onClick={handleJump}
+          className="px-2.5 h-8 rounded-lg text-xs font-semibold bg-gray-100 hover:bg-gray-200 text-gray-700 transition"
+        >
+          Очих
+        </button>
+      </div>
+    </div>
+  );
+}
+
 export default function SurveyPage() {
   const [surveys, setSurveys] = useState<Survey[]>([]);
   const [stats, setStats] = useState<SurveyStats | null>(null);
   const [loading, setLoading] = useState(true);
   const [actionLoading, setActionLoading] = useState(false);
   const [error, setError] = useState('');
-  
+
   const [showModal, setShowModal] = useState(false);
   const [showPreviewModal, setShowPreviewModal] = useState(false);
   const [previewSurvey, setPreviewSurvey] = useState<Survey | null>(null);
-  
+
   const [surveyTitle, setSurveyTitle] = useState('');
   const [surveyUrl, setSurveyUrl] = useState('');
   const [surveyStatus, setSurveyStatus] = useState<'active' | 'inactive' | 'draft'>('draft');
   const [editingId, setEditingId] = useState<string | null>(null);
 
   const [filterStatus, setFilterStatus] = useState<string>('');
+  const [currentPage, setCurrentPage] = useState(1);
 
-  // Load data
   useEffect(() => {
     fetchData();
+  }, [filterStatus]);
+
+  useEffect(() => {
+    setCurrentPage(1);
   }, [filterStatus]);
 
   const fetchData = async () => {
@@ -47,7 +160,6 @@ export default function SurveyPage() {
     }
   };
 
-  // Google Forms URL-ийг embed хэлбэрт хувиргах
   const getEmbedUrl = (url: string) => {
     if (url.includes('forms.google.com') || url.includes('docs.google.com/forms')) {
       return url.replace('/viewform', '/viewform?embedded=true');
@@ -61,14 +173,12 @@ export default function SurveyPage() {
 
     try {
       if (editingId) {
-        // Update
         await surveyApi.update(editingId, {
           title: surveyTitle,
           embed_url: surveyUrl,
           status: surveyStatus,
         });
       } else {
-        // Create
         await surveyApi.create({
           title: surveyTitle,
           embed_url: surveyUrl,
@@ -124,9 +234,9 @@ export default function SurveyPage() {
 
   const getStatusBadge = (status: string) => {
     const styles = {
-      active: 'bg-green-100 text-green-700 border-green-300',
-      inactive: 'bg-gray-100 text-gray-700 border-gray-300',
-      draft: 'bg-yellow-100 text-yellow-700 border-yellow-300',
+      active: 'bg-green-100 text-green-700 border-green-200',
+      inactive: 'bg-gray-100 text-gray-600 border-gray-200',
+      draft: 'bg-yellow-100 text-yellow-700 border-yellow-200',
     };
 
     const labels = {
@@ -136,19 +246,25 @@ export default function SurveyPage() {
     };
 
     return (
-      <span className={`px-3 py-1 rounded-full text-xs font-bold border ${styles[status as keyof typeof styles]}`}>
+      <span className={`px-2.5 py-1 rounded-full text-[11px] font-semibold border ${styles[status as keyof typeof styles]}`}>
         {labels[status as keyof typeof labels]}
       </span>
     );
   };
+
+  const totalPages = Math.max(1, Math.ceil(surveys.length / ITEMS_PER_PAGE));
+  const paginatedSurveys = surveys.slice(
+    (currentPage - 1) * ITEMS_PER_PAGE,
+    currentPage * ITEMS_PER_PAGE
+  );
 
   if (loading) {
     return (
       <div className="p-8 max-w-7xl mx-auto">
         <div className="flex items-center justify-center h-64">
           <div className="text-center">
-            <RefreshCw className="w-12 h-12 text-blue-600 animate-spin mx-auto mb-4" />
-            <p className="text-gray-600 font-semibold">Ачааллаж байна...</p>
+            <RefreshCw className="w-8 h-8 text-blue-600 animate-spin mx-auto mb-3" />
+            <p className="text-gray-500 text-sm">Ачааллаж байна...</p>
           </div>
         </div>
       </div>
@@ -161,96 +277,92 @@ export default function SurveyPage() {
       <div className="mb-8">
         <div className="flex items-center justify-between mb-6">
           <div>
-            <h1 className="text-4xl font-black bg-gradient-to-r from-blue-600 to-blue-800 bg-clip-text text-transparent mb-2">
+            <h1 className="text-2xl font-bold text-gray-800 mb-1">
               Санал асуулага
             </h1>
-            <p className="text-gray-600 text-lg">
+            <p className="text-gray-500 text-sm">
               Google Forms болон бусад санал асуулгын холбоосуудыг удирдах
             </p>
           </div>
 
-          <div className="flex gap-3">
-            <motion.button
-              whileHover={{ scale: 1.05 }}
-              whileTap={{ scale: 0.95 }}
+          <div className="flex gap-2">
+            <button
               onClick={fetchData}
-              className="flex items-center gap-2 bg-gray-100 hover:bg-gray-200 text-gray-700 px-4 py-3 rounded-xl font-bold transition-all duration-300"
+              className="flex items-center gap-2 bg-gray-100 hover:bg-gray-200 text-gray-700 px-4 py-2.5 rounded-lg text-sm font-semibold transition"
             >
-              <RefreshCw size={20} />
+              <RefreshCw size={16} />
               Шинэчлэх
-            </motion.button>
+            </button>
 
-            <motion.button
-              whileHover={{ scale: 1.05 }}
-              whileTap={{ scale: 0.95 }}
+            <button
               onClick={() => setShowModal(true)}
-              className="flex items-center gap-2 bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white px-6 py-3 rounded-xl font-bold shadow-lg shadow-blue-500/30 transition-all duration-300"
+              className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2.5 rounded-lg text-sm font-semibold transition"
             >
-              <Plus size={20} />
+              <Plus size={16} />
               Шинэ санал асуулага
-            </motion.button>
+            </button>
           </div>
         </div>
 
         {/* Stats Cards */}
         {stats && (
-          <div className="grid grid-cols-2 md:grid-cols-5 gap-4 mb-6">
-            <div className="bg-white rounded-xl p-4 border border-gray-200 shadow-sm">
+          <div className="grid grid-cols-2 md:grid-cols-5 gap-3 mb-6">
+            <div className="bg-white rounded-xl p-4 border border-gray-100">
               <div className="flex items-center gap-3">
-                <div className="p-2 bg-blue-100 rounded-lg">
-                  <BarChart3 size={20} className="text-blue-600" />
+                <div className="p-2 bg-blue-50 rounded-lg">
+                  <BarChart3 size={18} className="text-blue-600" />
                 </div>
                 <div>
-                  <p className="text-2xl font-black text-gray-800">{stats.total}</p>
-                  <p className="text-xs text-gray-600">Нийт</p>
+                  <p className="text-xl font-bold text-gray-800">{stats.total}</p>
+                  <p className="text-xs text-gray-500">Нийт</p>
                 </div>
               </div>
             </div>
 
-            <div className="bg-white rounded-xl p-4 border border-gray-200 shadow-sm">
+            <div className="bg-white rounded-xl p-4 border border-gray-100">
               <div className="flex items-center gap-3">
-                <div className="p-2 bg-green-100 rounded-lg">
+                <div className="p-2 bg-green-50 rounded-lg">
                   <div className="w-2 h-2 bg-green-600 rounded-full"></div>
                 </div>
                 <div>
-                  <p className="text-2xl font-black text-gray-800">{stats.active}</p>
-                  <p className="text-xs text-gray-600">Идэвхтэй</p>
+                  <p className="text-xl font-bold text-gray-800">{stats.active}</p>
+                  <p className="text-xs text-gray-500">Идэвхтэй</p>
                 </div>
               </div>
             </div>
 
-            <div className="bg-white rounded-xl p-4 border border-gray-200 shadow-sm">
+            <div className="bg-white rounded-xl p-4 border border-gray-100">
               <div className="flex items-center gap-3">
-                <div className="p-2 bg-gray-100 rounded-lg">
-                  <div className="w-2 h-2 bg-gray-600 rounded-full"></div>
+                <div className="p-2 bg-gray-50 rounded-lg">
+                  <div className="w-2 h-2 bg-gray-500 rounded-full"></div>
                 </div>
                 <div>
-                  <p className="text-2xl font-black text-gray-800">{stats.inactive}</p>
-                  <p className="text-xs text-gray-600">Идэвхгүй</p>
+                  <p className="text-xl font-bold text-gray-800">{stats.inactive}</p>
+                  <p className="text-xs text-gray-500">Идэвхгүй</p>
                 </div>
               </div>
             </div>
 
-            <div className="bg-white rounded-xl p-4 border border-gray-200 shadow-sm">
+            <div className="bg-white rounded-xl p-4 border border-gray-100">
               <div className="flex items-center gap-3">
-                <div className="p-2 bg-yellow-100 rounded-lg">
+                <div className="p-2 bg-yellow-50 rounded-lg">
                   <div className="w-2 h-2 bg-yellow-600 rounded-full"></div>
                 </div>
                 <div>
-                  <p className="text-2xl font-black text-gray-800">{stats.draft}</p>
-                  <p className="text-xs text-gray-600">Ноорог</p>
+                  <p className="text-xl font-bold text-gray-800">{stats.draft}</p>
+                  <p className="text-xs text-gray-500">Ноорог</p>
                 </div>
               </div>
             </div>
 
-            <div className="bg-white rounded-xl p-4 border border-gray-200 shadow-sm">
+            <div className="bg-white rounded-xl p-4 border border-gray-100">
               <div className="flex items-center gap-3">
-                <div className="p-2 bg-red-100 rounded-lg">
-                  <Trash2 size={16} className="text-red-600" />
+                <div className="p-2 bg-red-50 rounded-lg">
+                  <Trash2 size={16} className="text-red-500" />
                 </div>
                 <div>
-                  <p className="text-2xl font-black text-gray-800">{stats.deleted}</p>
-                  <p className="text-xs text-gray-600">Устгасан</p>
+                  <p className="text-xl font-bold text-gray-800">{stats.deleted}</p>
+                  <p className="text-xs text-gray-500">Устгасан</p>
                 </div>
               </div>
             </div>
@@ -259,154 +371,135 @@ export default function SurveyPage() {
 
         {/* Filter */}
         <div className="flex gap-2">
-          <button
-            onClick={() => setFilterStatus('')}
-            className={`px-4 py-2 rounded-lg font-semibold transition-all ${
-              filterStatus === '' ? 'bg-blue-600 text-white' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-            }`}
-          >
-            Бүгд
-          </button>
-          <button
-            onClick={() => setFilterStatus('active')}
-            className={`px-4 py-2 rounded-lg font-semibold transition-all ${
-              filterStatus === 'active' ? 'bg-green-600 text-white' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-            }`}
-          >
-            Идэвхтэй
-          </button>
-          <button
-            onClick={() => setFilterStatus('draft')}
-            className={`px-4 py-2 rounded-lg font-semibold transition-all ${
-              filterStatus === 'draft' ? 'bg-yellow-600 text-white' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-            }`}
-          >
-            Ноорог
-          </button>
-          <button
-            onClick={() => setFilterStatus('inactive')}
-            className={`px-4 py-2 rounded-lg font-semibold transition-all ${
-              filterStatus === 'inactive' ? 'bg-gray-600 text-white' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-            }`}
-          >
-            Идэвхгүй
-          </button>
+          {[
+            { value: '', label: 'Бүгд', active: 'bg-blue-600' },
+            { value: 'active', label: 'Идэвхтэй', active: 'bg-green-600' },
+            { value: 'draft', label: 'Ноорог', active: 'bg-yellow-600' },
+            { value: 'inactive', label: 'Идэвхгүй', active: 'bg-gray-600' },
+          ].map((f) => (
+            <button
+              key={f.value}
+              onClick={() => setFilterStatus(f.value)}
+              className={`px-3.5 py-1.5 rounded-lg text-sm font-semibold transition ${
+                filterStatus === f.value
+                  ? `${f.active} text-white`
+                  : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+              }`}
+            >
+              {f.label}
+            </button>
+          ))}
         </div>
       </div>
 
-      {/* Error Message */}
       {error && (
-        <div className="mb-6 bg-red-50 border-2 border-red-300 rounded-xl p-4">
-          <p className="text-red-700 font-semibold">{error}</p>
+        <div className="mb-6 bg-red-50 border border-red-200 rounded-lg p-3">
+          <p className="text-red-600 text-sm font-medium">{error}</p>
         </div>
       )}
 
       {/* Surveys Grid */}
       {surveys.length > 0 ? (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {surveys.map((survey) => (
-            <motion.div
-              key={survey.id}
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, scale: 0.9 }}
-              whileHover={{ y: -4 }}
-              className="bg-white rounded-2xl shadow-lg border border-gray-100 overflow-hidden hover:shadow-xl transition-all duration-300"
-            >
-              {/* Preview Thumbnail */}
+        <>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            {paginatedSurveys.map((survey) => (
               <div
-                className="relative h-48 bg-gradient-to-br from-blue-50 to-indigo-50 overflow-hidden group cursor-pointer"
-                onClick={() => handlePreview(survey)}
+                key={survey.id}
+                className="bg-white rounded-xl border border-gray-100 overflow-hidden hover:shadow-md transition-shadow duration-200"
               >
-                <iframe
-                  src={getEmbedUrl(survey.embed_url)}
-                  className="w-full h-full pointer-events-none scale-50 origin-top-left"
-                  style={{ width: '200%', height: '200%' }}
-                  title={survey.title}
-                />
-                <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-center justify-center">
-                  <div className="text-white text-center">
-                    <Eye size={40} className="mx-auto mb-2" />
-                    <p className="font-bold">Харах</p>
-                  </div>
-                </div>
-              </div>
-
-              <div className="p-6">
-                {/* Survey Title & Status */}
-                <div className="mb-4">
-                  <div className="flex items-start justify-between gap-2 mb-2">
-                    <h3 className="text-xl font-bold text-gray-800 line-clamp-2 flex-1">
-                      {survey.title}
-                    </h3>
-                    {getStatusBadge(survey.status)}
-                  </div>
-                  <p className="text-sm text-gray-500">
-                    {new Date(survey.created_at).toLocaleDateString('mn-MN', {
-                      year: 'numeric',
-                      month: 'long',
-                      day: 'numeric',
-                    })}
-                  </p>
-                </div>
-
-                {/* URL */}
-                <a
-                  href={survey.embed_url}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="flex items-center gap-2 text-blue-600 hover:text-blue-700 text-sm mb-4 group"
+                <div
+                  className="relative h-32 bg-gray-50 overflow-hidden group cursor-pointer"
+                  onClick={() => handlePreview(survey)}
                 >
-                  <LinkIcon size={16} className="group-hover:rotate-12 transition-transform" />
-                  <span className="truncate flex-1">{survey.embed_url}</span>
-                  <ExternalLink size={16} />
-                </a>
+                  <iframe
+                    src={getEmbedUrl(survey.embed_url)}
+                    className="w-full h-full pointer-events-none scale-50 origin-top-left"
+                    style={{ width: '200%', height: '200%' }}
+                    title={survey.title}
+                  />
+                  <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity duration-200 flex items-center justify-center">
+                    <div className="text-white text-center">
+                      <Eye size={24} className="mx-auto mb-1" />
+                      <p className="text-xs font-semibold">Харах</p>
+                    </div>
+                  </div>
+                </div>
 
-                {/* Actions */}
-                <div className="flex gap-2 pt-4 border-t border-gray-100">
-                  <motion.button
-                    whileHover={{ scale: 1.05 }}
-                    whileTap={{ scale: 0.95 }}
-                    onClick={() => handleEdit(survey)}
-                    disabled={actionLoading}
-                    className="flex-1 flex items-center justify-center gap-2 bg-gray-100 hover:bg-gray-200 text-gray-700 px-4 py-2 rounded-lg font-semibold transition-all duration-300 disabled:opacity-50"
+                <div className="p-4">
+                  <div className="mb-3">
+                    <div className="flex items-start justify-between gap-2 mb-1.5">
+                      <h3 className="text-sm font-semibold text-gray-800 line-clamp-2 flex-1">
+                        {survey.title}
+                      </h3>
+                      {getStatusBadge(survey.status)}
+                    </div>
+                    <p className="text-xs text-gray-400">
+                      {new Date(survey.created_at).toLocaleDateString('mn-MN', {
+                        year: 'numeric',
+                        month: 'long',
+                        day: 'numeric',
+                      })}
+                    </p>
+                  </div>
+
+                  <a
+                    href={survey.embed_url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="flex items-center gap-1.5 text-blue-600 hover:text-blue-700 text-xs mb-3"
                   >
-                    <Edit2 size={16} />
-                    Засах
-                  </motion.button>
-                  <motion.button
-                    whileHover={{ scale: 1.05 }}
-                    whileTap={{ scale: 0.95 }}
-                    onClick={() => handleDelete(survey.id)}
-                    disabled={actionLoading}
-                    className="flex-1 flex items-center justify-center gap-2 bg-red-50 hover:bg-red-100 text-red-600 px-4 py-2 rounded-lg font-semibold transition-all duration-300 disabled:opacity-50"
-                  >
-                    <Trash2 size={16} />
-                    Устгах
-                  </motion.button>
+                    <LinkIcon size={13} />
+                    <span className="truncate flex-1">{survey.embed_url}</span>
+                    <ExternalLink size={13} />
+                  </a>
+
+                  <div className="flex gap-2 pt-3 border-t border-gray-100">
+                    <button
+                      onClick={() => handleEdit(survey)}
+                      disabled={actionLoading}
+                      className="flex-1 flex items-center justify-center gap-1.5 bg-gray-100 hover:bg-gray-200 text-gray-700 h-8 rounded-lg text-xs font-semibold transition disabled:opacity-50"
+                    >
+                      <Edit2 size={13} />
+                      Засах
+                    </button>
+                    <button
+                      onClick={() => handleDelete(survey.id)}
+                      disabled={actionLoading}
+                      className="flex-1 flex items-center justify-center gap-1.5 bg-red-50 hover:bg-red-100 text-red-600 h-8 rounded-lg text-xs font-semibold transition disabled:opacity-50"
+                    >
+                      <Trash2 size={13} />
+                      Устгах
+                    </button>
+                  </div>
                 </div>
               </div>
-            </motion.div>
-          ))}
-        </div>
-      ) : (
-        <div className="text-center py-20">
-          <div className="inline-block p-6 bg-gray-100 rounded-full mb-4">
-            <LinkIcon size={48} className="text-gray-400" />
+            ))}
           </div>
-          <h3 className="text-2xl font-bold text-gray-800 mb-2">
+
+          <Pagination
+            currentPage={currentPage}
+            totalPages={totalPages}
+            onPageChange={setCurrentPage}
+          />
+        </>
+      ) : (
+        <div className="text-center py-16">
+          <div className="inline-block p-5 bg-gray-50 rounded-full mb-4">
+            <LinkIcon size={36} className="text-gray-300" />
+          </div>
+          <h3 className="text-lg font-semibold text-gray-700 mb-1">
             Санал асуулга байхгүй байна
           </h3>
-          <p className="text-gray-600 mb-6">
+          <p className="text-gray-500 text-sm mb-5">
             {filterStatus
               ? `"${filterStatus}" статустай санал асуулга олдсонгүй`
               : 'Эхний санал асуулгаа үүсгэж эхлээрэй!'}
           </p>
           <button
             onClick={() => setShowModal(true)}
-            className="inline-flex items-center gap-2 bg-gradient-to-r from-blue-600 to-blue-700 text-white px-6 py-3 rounded-xl font-bold"
+            className="inline-flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white px-5 py-2.5 rounded-lg text-sm font-semibold transition"
           >
-            <Plus size={20} />
+            <Plus size={16} />
             Шинэ санал асуулага
           </button>
         </div>
@@ -419,11 +512,12 @@ export default function SurveyPage() {
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="fixed inset-0 bg-black/90 backdrop-blur-sm z-50 flex flex-col"
+            transition={{ duration: 0.15 }}
+            className="fixed inset-0 bg-black/85 z-50 flex flex-col"
           >
-            <div className="bg-white/10 backdrop-blur-md border-b border-white/20 p-4 flex items-center justify-between">
-              <div className="flex items-center gap-4">
-                <h3 className="text-xl font-bold text-white">
+            <div className="bg-white/10 backdrop-blur-md border-b border-white/10 p-4 flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <h3 className="text-base font-semibold text-white">
                   {previewSurvey.title}
                 </h3>
                 {getStatusBadge(previewSurvey.status)}
@@ -431,26 +525,24 @@ export default function SurveyPage() {
                   href={previewSurvey.embed_url}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="flex items-center gap-2 text-blue-300 hover:text-blue-200 text-sm"
+                  className="flex items-center gap-1.5 text-blue-300 hover:text-blue-200 text-xs"
                 >
-                  <ExternalLink size={16} />
+                  <ExternalLink size={13} />
                   Шинэ tab-д нээх
                 </a>
               </div>
-              <motion.button
-                whileHover={{ scale: 1.1, rotate: 90 }}
-                whileTap={{ scale: 0.9 }}
+              <button
                 onClick={() => setShowPreviewModal(false)}
-                className="p-2 bg-white/10 hover:bg-white/20 rounded-xl transition-all duration-300"
+                className="p-2 bg-white/10 hover:bg-white/20 rounded-lg transition"
               >
-                <X size={24} className="text-white" />
-              </motion.button>
+                <X size={18} className="text-white" />
+              </button>
             </div>
 
             <div className="flex-1 p-4">
               <iframe
                 src={getEmbedUrl(previewSurvey.embed_url)}
-                className="w-full h-full rounded-2xl bg-white shadow-2xl"
+                className="w-full h-full rounded-xl bg-white"
                 title={previewSurvey.title}
               />
             </div>
@@ -465,28 +557,30 @@ export default function SurveyPage() {
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4"
+            transition={{ duration: 0.15 }}
+            className="fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-4"
             onClick={handleCloseModal}
           >
             <motion.div
-              initial={{ scale: 0.9, opacity: 0 }}
+              initial={{ scale: 0.97, opacity: 0 }}
               animate={{ scale: 1, opacity: 1 }}
-              exit={{ scale: 0.9, opacity: 0 }}
+              exit={{ scale: 0.97, opacity: 0 }}
+              transition={{ duration: 0.15 }}
               onClick={(e) => e.stopPropagation()}
-              className="bg-white rounded-3xl shadow-2xl p-8 max-w-lg w-full"
+              className="bg-white rounded-2xl shadow-xl p-6 max-w-lg w-full"
             >
-              <div className="mb-6">
-                <h2 className="text-3xl font-black bg-gradient-to-r from-blue-600 to-blue-800 bg-clip-text text-transparent mb-2">
+              <div className="mb-5">
+                <h2 className="text-lg font-bold text-gray-800 mb-1">
                   {editingId ? 'Санал асуулга засах' : 'Шинэ санал асуулага'}
                 </h2>
-                <p className="text-gray-600">
+                <p className="text-gray-500 text-sm">
                   Санал асуулагын мэдээллийг оруулна уу
                 </p>
               </div>
 
-              <form onSubmit={handleSubmit} className="space-y-6">
+              <form onSubmit={handleSubmit} className="space-y-4">
                 <div>
-                  <label className="block text-sm font-bold text-gray-700 mb-2">
+                  <label className="block text-xs font-semibold text-gray-600 mb-1.5">
                     Санал асуулагын нэр
                   </label>
                   <input
@@ -494,13 +588,13 @@ export default function SurveyPage() {
                     value={surveyTitle}
                     onChange={(e) => setSurveyTitle(e.target.value)}
                     placeholder="Жишээ: Ажилчдын сэтгэл ханамжийн судалгаа"
-                    className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:border-blue-500 focus:ring-4 focus:ring-blue-100 transition-all duration-300 outline-none"
+                    className="w-full px-3.5 py-2.5 text-sm border border-gray-200 rounded-lg focus:border-blue-500 focus:ring-2 focus:ring-blue-100 transition outline-none"
                     required
                   />
                 </div>
 
                 <div>
-                  <label className="block text-sm font-bold text-gray-700 mb-2">
+                  <label className="block text-xs font-semibold text-gray-600 mb-1.5">
                     URL холбоос
                   </label>
                   <input
@@ -508,22 +602,22 @@ export default function SurveyPage() {
                     value={surveyUrl}
                     onChange={(e) => setSurveyUrl(e.target.value)}
                     placeholder="https://forms.google.com/..."
-                    className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:border-blue-500 focus:ring-4 focus:ring-blue-100 transition-all duration-300 outline-none"
+                    className="w-full px-3.5 py-2.5 text-sm border border-gray-200 rounded-lg focus:border-blue-500 focus:ring-2 focus:ring-blue-100 transition outline-none"
                     required
                   />
-                  <p className="text-xs text-gray-500 mt-2">
+                  <p className="text-xs text-gray-400 mt-1.5">
                     Google Forms эсвэл бусад санал асуулгын холбоос
                   </p>
                 </div>
 
                 <div>
-                  <label className="block text-sm font-bold text-gray-700 mb-2">
+                  <label className="block text-xs font-semibold text-gray-600 mb-1.5">
                     Статус
                   </label>
                   <select
                     value={surveyStatus}
                     onChange={(e) => setSurveyStatus(e.target.value as 'active' | 'inactive' | 'draft')}
-                    className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:border-blue-500 focus:ring-4 focus:ring-blue-100 transition-all duration-300 outline-none"
+                    className="w-full px-3.5 py-2.5 text-sm border border-gray-200 rounded-lg focus:border-blue-500 focus:ring-2 focus:ring-blue-100 transition outline-none"
                   >
                     <option value="draft">Ноорог</option>
                     <option value="active">Идэвхтэй</option>
@@ -531,23 +625,23 @@ export default function SurveyPage() {
                   </select>
                 </div>
 
-                <div className="flex gap-3 pt-4">
+                <div className="flex gap-3 pt-2">
                   <button
                     type="button"
                     onClick={handleCloseModal}
                     disabled={actionLoading}
-                    className="flex-1 px-6 py-3 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-xl font-bold transition-all duration-300 disabled:opacity-50"
+                    className="flex-1 px-4 py-2.5 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-lg text-sm font-semibold transition disabled:opacity-50"
                   >
                     Болих
                   </button>
                   <button
                     type="submit"
                     disabled={actionLoading}
-                    className="flex-1 px-6 py-3 bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white rounded-xl font-bold shadow-lg shadow-blue-500/30 transition-all duration-300 disabled:opacity-50 flex items-center justify-center gap-2"
+                    className="flex-1 px-4 py-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-sm font-semibold transition disabled:opacity-50 flex items-center justify-center gap-2"
                   >
                     {actionLoading ? (
                       <>
-                        <RefreshCw size={18} className="animate-spin" />
+                        <RefreshCw size={15} className="animate-spin" />
                         Түр хүлээнэ үү...
                       </>
                     ) : (

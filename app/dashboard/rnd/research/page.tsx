@@ -63,6 +63,8 @@ const API_URL =
   process.env.NEXT_PUBLIC_API_URL ||
   "https://bodi-web-backend-bzf7bnh6csbvf0cp.eastasia-01.azurewebsites.net";
 
+const ITEMS_PER_PAGE = 9;
+
 export default function RndresearchPage() {
   const [rndresearch, setRndresearch] = useState<RndresearchItem[]>([]);
   const [query, setQuery] = useState("");
@@ -81,10 +83,9 @@ export default function RndresearchPage() {
   const [newCreatedAt, setNewCreatedAt] = useState<string>("");
   const [editId, setEditId] = useState<string | null>(null);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
-  const [itemToDelete, setItemToDelete] = useState<RndresearchItem | null>(
-    null
-  );
+  const [itemToDelete, setItemToDelete] = useState<RndresearchItem | null>(null);
   const [errorMessage, setErrorMessage] = useState<string>("");
+  const [currentPage, setCurrentPage] = useState(1);
 
   const jsonToHTML = (json: Record<string, unknown>): string => {
     if (
@@ -126,7 +127,6 @@ export default function RndresearchPage() {
     fetchRndresearch();
   }, [fetchRndresearch]);
 
-  // Modal escape key handler
   useEffect(() => {
     if (open) {
       const handleEscape = (e: KeyboardEvent) => {
@@ -139,13 +139,16 @@ export default function RndresearchPage() {
     }
   }, [open]);
 
-  // Auto-clear error message after 5 seconds
   useEffect(() => {
     if (errorMessage) {
       const timer = setTimeout(() => setErrorMessage(""), 5000);
       return () => clearTimeout(timer);
     }
   }, [errorMessage]);
+
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [query, statusFilter, startDate, endDate]);
 
   const openDeleteDialog = (item: RndresearchItem) => {
     setItemToDelete(item);
@@ -161,7 +164,6 @@ export default function RndresearchPage() {
       setRndresearch(rndresearch.filter((item) => item.id !== itemToDelete.id));
       setDeleteDialogOpen(false);
       setItemToDelete(null);
-      console.log("Мэдээ амжилттай устгагдлаа");
     } catch (err) {
       console.error("Delete error:", err);
       setErrorMessage("Мэдээ устгахад алдаа гарлаа.");
@@ -200,12 +202,10 @@ export default function RndresearchPage() {
       setErrorMessage("Гарчиг оруулна уу!");
       return false;
     }
-
     if (!newContents.trim()) {
       setErrorMessage("Контент оруулна уу!");
       return false;
     }
-
     return true;
   };
 
@@ -227,7 +227,6 @@ export default function RndresearchPage() {
         is_research: newIsResearch,
       };
 
-      // Огноо өөрчилсөн бол payload-д нэмэх
       if (editId && newCreatedAt) {
         payload.created_at = new Date(newCreatedAt).toISOString();
       }
@@ -245,12 +244,10 @@ export default function RndresearchPage() {
               : item
           )
         );
-        console.log("Мэдээ амжилттай шинэчлэгдлээ");
       } else {
         const res = await axios.post(`${API_URL}/api/research`, payload);
         const newItem = res.data.data || res.data;
         setRndresearch([{ ...newItem, contents: newContents }, ...rndresearch]);
-        console.log("Шинэ мэдээ амжилттай нэмэгдлээ");
       }
 
       resetModal();
@@ -321,6 +318,20 @@ export default function RndresearchPage() {
     return matchesQuery && matchesStatus && matchesDate;
   });
 
+  const totalPages = Math.max(1, Math.ceil(filtered.length / ITEMS_PER_PAGE));
+  const paginatedItems = filtered.slice(
+    (currentPage - 1) * ITEMS_PER_PAGE,
+    currentPage * ITEMS_PER_PAGE
+  );
+
+  const pageNumbers = Array.from({ length: totalPages }, (_, i) => i + 1)
+    .filter((p) => p === 1 || p === totalPages || Math.abs(p - currentPage) <= 1)
+    .reduce<(number | "...")[]>((acc, p, idx, arr) => {
+      if (idx > 0 && p - (arr[idx - 1] as number) > 1) acc.push("...");
+      acc.push(p);
+      return acc;
+    }, []);
+
   const handleResetFilters = () => {
     setQuery("");
     setStatusFilter("all");
@@ -329,8 +340,7 @@ export default function RndresearchPage() {
   };
 
   return (
-    <div className="flex flex-col gap-8">
-      {/* Error Message Banner */}
+    <div className="flex flex-col gap-6">
       {errorMessage && (
         <div className="bg-destructive/10 border border-destructive text-destructive px-4 py-3 rounded-lg">
           <p className="text-sm font-medium">{errorMessage}</p>
@@ -396,9 +406,7 @@ export default function RndresearchPage() {
 
       {/* CONTENT GRID */}
       {loading ? (
-        <p className="text-center text-muted-foreground py-10">
-          Уншиж байна...
-        </p>
+        <p className="text-center text-muted-foreground py-10">Уншиж байна...</p>
       ) : filtered.length === 0 ? (
         <Empty>
           <EmptyHeader>
@@ -412,103 +420,146 @@ export default function RndresearchPage() {
           </EmptyHeader>
         </Empty>
       ) : (
-        <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-          {filtered.map((item) => {
-            const htmlContent =
-              typeof item.contents === "string" ? item.contents : "";
-            const images = extractImagesFromHTML(htmlContent);
-            const firstImg = images.length > 0 ? images[0] : null;
-            const textPreview = extractTextFromHTML(htmlContent);
+        <>
+          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+            {paginatedItems.map((item) => {
+              const htmlContent =
+                typeof item.contents === "string" ? item.contents : "";
+              const images = extractImagesFromHTML(htmlContent);
+              const firstImg = images.length > 0 ? images[0] : null;
+              const textPreview = extractTextFromHTML(htmlContent);
 
-            return (
-              <div
-                key={item.id}
-                className="bg-card rounded-2xl overflow-hidden shadow-md hover:shadow-2xl transition-all duration-300 border flex flex-col"
-              >
-                {firstImg ? (
-                  <Image
-                    width={400}
-                    height={200}
-                    src={firstImg}
-                    alt={item.title}
-                    className="w-full h-44 object-cover"
-                  />
-                ) : (
-                  <div className="w-full h-44 bg-muted flex items-center justify-center text-muted-foreground text-sm">
-                    No image
-                  </div>
-                )}
-
-                <div className="p-5 flex-1 flex flex-col">
-                  <div className="flex items-center justify-between mb-2">
-                    <h3 className="font-semibold text-base line-clamp-1">
-                      {item.title}
-                    </h3>
-                    <div className="flex gap-1">
-                      {item.position && (
-                        <span className="text-xs bg-yellow-500/80 px-2 py-0.5 rounded text-white">
-                          ⭐
-                        </span>
-                      )}
-                      {item.is_research && (
-                        <span className="text-xs bg-blue-600/80 px-2 py-0.5 rounded text-white">
-                          🔬
-                        </span>
-                      )}
+              return (
+                <div
+                  key={item.id}
+                  className="bg-card rounded-xl overflow-hidden shadow-sm hover:shadow-md transition-shadow duration-200 border flex flex-col"
+                >
+                  {firstImg ? (
+                    <Image
+                      width={400}
+                      height={140}
+                      src={firstImg}
+                      alt={item.title}
+                      className="w-full h-32 object-cover"
+                    />
+                  ) : (
+                    <div className="w-full h-32 bg-muted flex items-center justify-center text-muted-foreground text-xs">
+                      No image
                     </div>
-                  </div>
-
-                  <p className="text-xs text-muted-foreground mb-2">
-                    📅 {new Date(item.created_at).toLocaleDateString("mn-MN")}
-                  </p>
-                  {item.updated_at && (
-                    <p className="text-xs text-muted-foreground/70 mb-2">
-                      ✏️ {new Date(item.updated_at).toLocaleDateString("mn-MN")}
-                    </p>
                   )}
 
-                  <p className="text-sm text-muted-foreground line-clamp-3 mb-3">
-                    {textPreview}
-                  </p>
+                  <div className="p-3.5 flex-1 flex flex-col">
+                    <div className="flex items-center justify-between mb-1.5">
+                      <h3 className="font-semibold text-sm line-clamp-1">
+                        {item.title}
+                      </h3>
+                      <div className="flex gap-1 shrink-0">
+                        {item.position && (
+                          <span className="text-[10px] bg-yellow-500/80 px-1.5 py-0.5 rounded text-white">
+                            ⭐
+                          </span>
+                        )}
+                        {item.is_research && (
+                          <span className="text-[10px] bg-blue-600/80 px-1.5 py-0.5 rounded text-white">
+                            🔬
+                          </span>
+                        )}
+                      </div>
+                    </div>
 
-                  <div className="flex justify-between items-center mt-auto pt-2 border-t">
-                    <span
-                      className={`text-xs px-2 py-1 rounded-full ${
-                        item.status
-                          ? "bg-green-500/80 text-white"
-                          : "bg-gray-400 text-white"
-                      }`}
-                    >
-                      {item.status ? "Идэвхтэй" : "Идэвхгүй"}
-                    </span>
-                    <span className="text-xs text-muted-foreground">
-                      👁 {item.viewers}
-                    </span>
-                  </div>
+                    <p className="text-[11px] text-muted-foreground mb-1.5">
+                      {new Date(item.created_at).toLocaleDateString("mn-MN")}
+                    </p>
 
-                  <div className="flex gap-2 mt-4">
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      onClick={() => openEditModal(item)}
-                      className="flex-1"
-                    >
-                      Засах
-                    </Button>
-                    <Button
-                      size="sm"
-                      variant="destructive"
-                      onClick={() => openDeleteDialog(item)}
-                      className="flex-1"
-                    >
-                      Устгах
-                    </Button>
+                    <p className="text-xs text-muted-foreground line-clamp-2 mb-2">
+                      {textPreview}
+                    </p>
+
+                    <div className="flex justify-between items-center mt-auto pt-2 border-t">
+                      <span
+                        className={`text-[10px] px-2 py-0.5 rounded-full ${
+                          item.status
+                            ? "bg-green-500/80 text-white"
+                            : "bg-gray-400 text-white"
+                        }`}
+                      >
+                        {item.status ? "Идэвхтэй" : "Идэвхгүй"}
+                      </span>
+                      <span className="text-[10px] text-muted-foreground">
+                        👁 {item.viewers}
+                      </span>
+                    </div>
+
+                    <div className="flex gap-2 mt-3">
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() => openEditModal(item)}
+                        className="flex-1 h-8 text-xs"
+                      >
+                        Засах
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="destructive"
+                        onClick={() => openDeleteDialog(item)}
+                        className="flex-1 h-8 text-xs"
+                      >
+                        Устгах
+                      </Button>
+                    </div>
                   </div>
                 </div>
+              );
+            })}
+          </div>
+
+          {/* PAGINATION */}
+          {filtered.length > ITEMS_PER_PAGE && (
+            <div className="flex items-center justify-center gap-2 pt-2">
+              <Button
+                variant="outline"
+                size="sm"
+                disabled={currentPage === 1}
+                onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
+              >
+                Өмнөх
+              </Button>
+
+              <div className="flex items-center gap-1">
+                {pageNumbers.map((p, idx) =>
+                  p === "..." ? (
+                    <span
+                      key={`ellipsis-${idx}`}
+                      className="px-2 text-sm text-muted-foreground"
+                    >
+                      ...
+                    </span>
+                  ) : (
+                    <Button
+                      key={p}
+                      variant={p === currentPage ? "default" : "outline"}
+                      size="sm"
+                      className="w-9"
+                      onClick={() => setCurrentPage(p as number)}
+                    >
+                      {p}
+                    </Button>
+                  )
+                )}
               </div>
-            );
-          })}
-        </div>
+
+              <Button
+                variant="outline"
+                size="sm"
+                disabled={currentPage === totalPages}
+                onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
+              >
+                Дараагийн хуудас
+              </Button>
+            </div>
+          )}
+        </>
       )}
 
       {/* MODAL */}
@@ -536,9 +587,7 @@ export default function RndresearchPage() {
                   <Checkbox
                     id="status"
                     checked={newStatus}
-                    onCheckedChange={(checked) =>
-                      setNewStatus(checked as boolean)
-                    }
+                    onCheckedChange={(checked) => setNewStatus(checked as boolean)}
                   />
                   <Label htmlFor="status" className="text-sm">
                     Идэвхтэй
@@ -549,9 +598,7 @@ export default function RndresearchPage() {
                   <Checkbox
                     id="position"
                     checked={newPosition}
-                    onCheckedChange={(checked) =>
-                      setNewPosition(checked as boolean)
-                    }
+                    onCheckedChange={(checked) => setNewPosition(checked as boolean)}
                   />
                   <Label htmlFor="position">Онцолсон</Label>
                 </div>
@@ -560,9 +607,7 @@ export default function RndresearchPage() {
                   <Checkbox
                     id="is_research"
                     checked={newIsResearch}
-                    onCheckedChange={(checked) =>
-                      setNewIsResearch(checked as boolean)
-                    }
+                    onCheckedChange={(checked) => setNewIsResearch(checked as boolean)}
                   />
                   <Label htmlFor="is_research">Судалгаа</Label>
                 </div>
@@ -570,7 +615,7 @@ export default function RndresearchPage() {
                 {editId && (
                   <div className="flex items-center gap-2">
                     <Label htmlFor="date" className="text-sm whitespace-nowrap">
-                      📅 Огноо:
+                      Огноо:
                     </Label>
                     <Input
                       id="date"

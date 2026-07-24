@@ -5,28 +5,30 @@ import { motion, AnimatePresence } from "framer-motion";
 import { usePathname } from "next/navigation";
 import { useState, useEffect } from "react";
 import {
+  LayoutDashboard,
   Newspaper,
   Video,
   ChevronDown,
   Book,
   Users,
   ClipboardList,
-} from "lucide-react"; // ← ClipboardList нэмэх
+} from "lucide-react";
 import Image from "next/image";
 
 const menu = [
+  { label: "Хяналтын самбар", icon: LayoutDashboard, href: "/dashboard" },
   { label: "Мэдээ мэдээлэл", icon: Newspaper, href: "/dashboard/news" },
   { label: "Видео мэдээ", icon: Video, href: "/dashboard/videonews" },
   { label: "Бонз", icon: Book },
   { label: "RnD", icon: Users },
-  { label: "Санал асуулага", icon: ClipboardList, href: "/dashboard/survey" }, // ← Шинэ цэс
+  { label: "Санал асуулага", icon: ClipboardList, href: "/dashboard/survey" },
 ];
 
 const bonzSubMenu = [
   { label: "Бүгд", href: "/dashboard/bonz/all" },
   { label: "Байгаль", href: "/dashboard/bonz/nature" },
-  { label: "Хүн", href: "/dashboard/bonz/person" },
-  { label: "Хөгжил", href: "/dashboard/bonz/development" },
+  { label: "Нийгэм", href: "/dashboard/bonz/person" },
+  { label: "Засаглал", href: "/dashboard/bonz/development" },
 ];
 
 const rndSubMenu = [
@@ -34,6 +36,21 @@ const rndSubMenu = [
   { label: "Хамтын ажиллагаа", href: "/dashboard/rnd/work" },
   { label: "Судалгаа хөгжүүлэлт", href: "/dashboard/rnd/research" },
 ];
+
+function GlowBar() {
+  return (
+    <motion.span
+      layoutId="sidebar-glow"
+      transition={{ type: "spring", stiffness: 500, damping: 35 }}
+      className="absolute left-0 top-1/2 -translate-y-1/2 h-6 w-[3px] rounded-full"
+      style={{
+        background: "linear-gradient(180deg, #60a5fa, #2563eb)",
+        boxShadow:
+          "0 0 6px 1px rgba(37,99,235,0.9), 0 0 14px 4px rgba(37,99,235,0.5), 0 0 24px 8px rgba(59,130,246,0.25)",
+      }}
+    />
+  );
+}
 
 export default function Sidebar() {
   const pathname = usePathname() ?? "";
@@ -49,10 +66,8 @@ export default function Sidebar() {
 
   useEffect(() => {
     if (!mounted) return;
-
     const isBonzActive = bonzSubMenu.some((sub) => pathname === sub.href);
     const isRndActive = rndSubMenu.some((sub) => pathname === sub.href);
-
     setOpenMenus((prev) => ({
       Бонз: isBonzActive || prev.Бонз,
       RnD: isRndActive || prev.RnD,
@@ -66,221 +81,126 @@ export default function Sidebar() {
   const isBonzActiveNow = bonzSubMenu.some((sub) => pathname === sub.href);
   const isRndActiveNow = rndSubMenu.some((sub) => pathname === sub.href);
 
+  const NAV_ITEM_BASE =
+    "flex items-center gap-3 px-4 py-3 rounded-lg font-medium text-[14px] transition-colors duration-200 relative";
+
   if (!mounted) {
     return (
-      <aside className="w-64 h-screen bg-linear-to-b from-white to-gray-50/80 backdrop-blur-md p-6 flex flex-col gap-6 shadow-2xl border-r border-gray-200/50">
-        <div className="flex items-center justify-center mb-4">
-          <Image
-            src="/images/mainlogo.png"
-            alt="Company Logo"
-            width={160}
-            height={50}
-            className="drop-shadow-lg"
-            priority
-          />
-        </div>
-        <nav className="flex flex-col gap-2">
-          {menu.map((item) => {
-            const Icon = item.icon;
-            return (
-              <div
-                key={item.label}
-                className="flex items-center gap-3 px-4 py-3 rounded-xl font-semibold text-gray-700"
-              >
-                <Icon size={20} className="text-gray-500" />
-                <span>{item.label}</span>
-              </div>
-            );
-          })}
-        </nav>
-        <div className="mt-auto pt-6 border-t border-gray-200 text-center text-sm text-gray-400">
-          © 2025{" "}
-          <span className="font-bold text-transparent bg-clip-text bg-linear-to-r from-blue-600 to-blue-800">
-            Bodi Group
-          </span>
+      <aside className="w-64 h-screen bg-white p-5 flex flex-col gap-1 border-r border-gray-100">
+        <div className="flex items-center justify-center py-4 mb-4">
+          <Image src="/images/mainlogo.png" alt="Company Logo" width={150} height={46} priority />
         </div>
       </aside>
     );
   }
 
   return (
-    <motion.aside
-      initial={{ x: -280 }}
-      animate={{ x: 0 }}
-      transition={{ type: "spring", stiffness: 80, damping: 20 }}
-      className="w-64 h-screen bg-linear-to-b from-white to-gray-50/80 backdrop-blur-md p-6 flex flex-col gap-6 shadow-2xl border-r border-gray-200/50 relative overflow-y-auto"
-    >
-      <div className="flex items-center justify-center mb-4">
-        <motion.div
-          whileHover={{ scale: 1.05 }}
-          transition={{ type: "spring", stiffness: 300 }}
-        >
-          <Image
-            src="/images/mainlogo.png"
-            alt="Company Logo"
-            width={160}
-            height={50}
-            className="drop-shadow-lg"
-            priority
-          />
-        </motion.div>
-      </div>
+    <aside className="w-64 h-screen relative flex flex-col border-r border-white/20 overflow-hidden">
+      <div className="absolute inset-0 bg-white/70 backdrop-blur-xl" />
 
-      <nav className="flex flex-col gap-2">
-        {menu.map((item) => {
-          const Icon = item.icon;
-          const isБонз = item.label === "Бонз";
-          const isRnd = item.label === "RnD";
+      <div className="relative z-10 flex flex-col h-full">
+        <div className="flex items-center justify-center py-6 px-5 border-b border-white/30">
+          <Image src="/images/mainlogo.png" alt="Company Logo" width={150} height={46} priority />
+        </div>
 
-          const subMenuItems = isБонз ? bonzSubMenu : isRnd ? rndSubMenu : [];
-          const isActiveParent = isБонз
-            ? isBonzActiveNow
-            : isRnd
-            ? isRndActiveNow
-            : false;
-          const isOpen = openMenus[item.label] || isActiveParent;
+        <nav className="flex flex-col gap-1 px-3 py-4 overflow-y-auto flex-1">
+          {menu.map((item) => {
+            const Icon = item.icon;
+            const isБонз = item.label === "Бонз";
+            const isRnd = item.label === "RnD";
+            const subMenuItems = isБонз ? bonzSubMenu : isRnd ? rndSubMenu : [];
+            const isActiveParent = isБонз ? isBonzActiveNow : isRnd ? isRndActiveNow : false;
+            const isOpen = openMenus[item.label] || isActiveParent;
 
-          if (isБонз || isRnd) {
-            return (
-              <div key={item.label} className="relative">
-                <motion.button
-                  type="button"
-                  onClick={() => toggleMenu(item.label)}
-                  aria-expanded={isOpen}
-                  whileHover={{ x: 4 }}
-                  whileTap={{ scale: 0.98 }}
-                  className={`flex items-center justify-between px-4 py-3 rounded-xl w-full text-left transition-all duration-300 group ${
-                    isActiveParent
-                      ? "bg-linear-to-r from-blue-500 to-blue-600 text-white shadow-lg shadow-blue-500/30"
-                      : "text-gray-700 hover:bg-linear-to-r hover:from-gray-100 hover:to-gray-50 hover:shadow-md"
-                  }`}
-                >
-                  <div className="flex items-center gap-3">
-                    <Icon
-                      size={20}
-                      className={`transition-all duration-300 ${
-                        isActiveParent
-                          ? "text-white"
-                          : "text-gray-500 group-hover:text-blue-600"
-                      }`}
-                    />
-                    <span className="font-semibold">{item.label}</span>
-                  </div>
-                  <motion.div
-                    animate={{ rotate: isOpen ? 180 : 0 }}
-                    transition={{ duration: 0.3 }}
+            if (isБонз || isRnd) {
+              return (
+                <div key={item.label}>
+                  <button
+                    type="button"
+                    onClick={() => toggleMenu(item.label)}
+                    aria-expanded={isOpen}
+                    className={`${NAV_ITEM_BASE} w-full justify-between ${
+                      isActiveParent
+                        ? "bg-blue-50/80 text-blue-700"
+                        : "text-gray-600 hover:bg-white/50 hover:text-gray-900"
+                    }`}
                   >
-                    <ChevronDown
-                      size={18}
-                      className={
-                        isActiveParent ? "text-white" : "text-gray-500"
-                      }
-                    />
-                  </motion.div>
-                </motion.button>
+                    {isActiveParent && <GlowBar />}
+                    <div className="flex items-center gap-3">
+                      <Icon
+                        size={18}
+                        strokeWidth={2}
+                        className={isActiveParent ? "text-blue-600" : "text-gray-400"}
+                      />
+                      <span>{item.label}</span>
+                    </div>
+                    <motion.div animate={{ rotate: isOpen ? 180 : 0 }} transition={{ duration: 0.2 }}>
+                      <ChevronDown size={16} className="text-gray-400" />
+                    </motion.div>
+                  </button>
 
-                <AnimatePresence initial={false}>
-                  {isOpen && (
-                    <motion.div
-                      initial={{ height: 0, opacity: 0 }}
-                      animate={{ height: "auto", opacity: 1 }}
-                      exit={{ height: 0, opacity: 0 }}
-                      transition={{ duration: 0.25, ease: "easeInOut" }}
-                      className="flex flex-col ml-4 mt-2 gap-1 overflow-hidden pl-2"
-                    >
-                      {subMenuItems.map((sub) => {
-                        const activeSub =
-                          pathname === sub.href ||
-                          pathname.startsWith(sub.href + "/");
-
-                        return (
-                          <motion.div
-                            key={sub.label}
-                            whileHover={{ x: 4 }}
-                            whileTap={{ scale: 0.98 }}
-                          >
-                            <Link
-                              href={sub.href}
-                              className={`px-4 py-2.5 rounded-xl block transition-all duration-300 relative overflow-hidden group font-semibold ${
-                                activeSub
-                                  ? "bg-linear-to-r from-blue-500 to-blue-600 text-white shadow-lg shadow-blue-500/30"
-                                  : "text-gray-600 hover:bg-gray-50 hover:text-blue-600"
-                              }`}
-                            >
-                              <span
-                                className={`absolute inset-0 bg-linear-to-r from-blue-50 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 ${
-                                  activeSub ? "hidden" : ""
-                                }`}
-                              ></span>
-
-                              <span
-                                className={`relative z-10 ${
-                                  activeSub ? "translate-x-1" : ""
+                  <AnimatePresence initial={false}>
+                    {isOpen && (
+                      <motion.div
+                        initial={{ height: 0, opacity: 0 }}
+                        animate={{ height: "auto", opacity: 1 }}
+                        exit={{ height: 0, opacity: 0 }}
+                        transition={{ duration: 0.2 }}
+                        className="overflow-hidden"
+                      >
+                        <div className="flex flex-col gap-0.5 ml-[26px] mt-1 mb-1 pl-4 border-l border-white/40">
+                          {subMenuItems.map((sub) => {
+                            const activeSub =
+                              pathname === sub.href || pathname.startsWith(sub.href + "/");
+                            return (
+                              <Link
+                                key={sub.label}
+                                href={sub.href}
+                                className={`relative px-3 py-2 rounded-md text-[13.5px] transition-colors duration-200 ${
+                                  activeSub
+                                    ? "text-blue-700 font-medium bg-blue-50/80"
+                                    : "text-gray-500 hover:text-gray-800 hover:bg-white/50"
                                 }`}
                               >
+                                {activeSub && <GlowBar />}
                                 {sub.label}
-                              </span>
-                            </Link>
-                          </motion.div>
-                        );
-                      })}
-                    </motion.div>
-                  )}
-                </AnimatePresence>
-              </div>
-            );
-          }
+                              </Link>
+                            );
+                          })}
+                        </div>
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
+                </div>
+              );
+            }
 
-          const activeTop = item.href
-            ? pathname === item.href || pathname.startsWith(item.href)
-            : false;
+            const activeTop = item.href
+              ? pathname === item.href || (item.href !== "/dashboard" && pathname.startsWith(item.href))
+              : false;
 
-          return (
-            <motion.div
-              key={item.label}
-              whileHover={{ x: 4 }}
-              whileTap={{ scale: 0.98 }}
-            >
+            return (
               <Link
+                key={item.label}
                 href={item.href ?? "#"}
-                className={`flex items-center gap-3 px-4 py-3 rounded-xl font-semibold transition-all duration-300 group relative overflow-hidden ${
+                className={`${NAV_ITEM_BASE} ${
                   activeTop
-                    ? "bg-linear-to-r from-blue-500 to-blue-600 text-white shadow-lg shadow-blue-500/30"
-                    : "text-gray-700 hover:bg-linear-to-r hover:from-gray-100 hover:to-gray-50 hover:shadow-md"
+                    ? "bg-blue-50/80 text-blue-700"
+                    : "text-gray-600 hover:bg-white/50 hover:text-gray-900"
                 }`}
               >
-                <span
-                  className={`absolute inset-0 bg-linear-to-r from-blue-50 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 ${
-                    activeTop ? "hidden" : ""
-                  }`}
-                ></span>
-
-                <Icon
-                  size={20}
-                  className={`transition-all duration-300 z-10 ${
-                    activeTop
-                      ? "text-white"
-                      : "text-gray-500 group-hover:text-blue-600"
-                  }`}
-                />
-                <span className={`z-10 ${activeTop ? "translate-x-1" : ""}`}>
-                  {item.label}
-                </span>
+                {activeTop && <GlowBar />}
+                <Icon size={18} strokeWidth={2} className={activeTop ? "text-blue-600" : "text-gray-400"} />
+                <span>{item.label}</span>
               </Link>
-            </motion.div>
-          );
-        })}
-      </nav>
+            );
+          })}
+        </nav>
 
-      <motion.div
-        className="mt-auto pt-6 border-t border-gray-200 text-center text-sm text-gray-400"
-        whileHover={{ scale: 1.02 }}
-      >
-        © 2025{" "}
-        <span className="font-bold text-transparent bg-clip-text bg-linear-to-r from-blue-600 to-blue-800">
-          Bodi Group
-        </span>
-      </motion.div>
-    </motion.aside>
+        <div className="px-5 py-4 border-t border-white/30 text-center text-xs text-gray-400">
+          © 2026 <span className="font-semibold text-gray-500">Bodi Group</span>
+        </div>
+      </div>
+    </aside>
   );
 }

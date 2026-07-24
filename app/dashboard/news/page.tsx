@@ -43,7 +43,7 @@ interface NewsItems {
   viewers: number;
   position: boolean;
   is_research: boolean;
-  language: string; // ✅ Added
+  language: string;
   created_at: string;
   updated_at?: string;
 }
@@ -57,7 +57,7 @@ interface UpdatePayload {
   status: boolean;
   position: boolean;
   is_research: boolean;
-  language: string; // ✅ Added
+  language: string;
   created_at?: string;
 }
 
@@ -66,6 +66,102 @@ const API_URL =
   "https://bodi-web-backend-bzf7bnh6csbvf0cp.eastasia-01.azurewebsites.net";
 
 const ITEMS_PER_PAGE = 9;
+
+function Pagination({
+  currentPage,
+  totalPages,
+  onPageChange,
+}: {
+  currentPage: number;
+  totalPages: number;
+  onPageChange: (page: number) => void;
+}) {
+  const [jumpValue, setJumpValue] = useState("");
+
+  const pageNumbers = Array.from({ length: totalPages }, (_, i) => i + 1)
+    .filter((p) => p === 1 || p === totalPages || Math.abs(p - currentPage) <= 1)
+    .reduce<(number | "...")[]>((acc, p, idx, arr) => {
+      if (idx > 0 && p - (arr[idx - 1] as number) > 1) acc.push("...");
+      acc.push(p);
+      return acc;
+    }, []);
+
+  const handleJump = () => {
+    const page = parseInt(jumpValue, 10);
+    if (!isNaN(page) && page >= 1 && page <= totalPages) {
+      onPageChange(page);
+      setJumpValue("");
+    }
+  };
+
+  if (totalPages <= 1) return null;
+
+  return (
+    <div className="flex flex-wrap items-center justify-center gap-2 pt-2">
+      <Button variant="outline" size="sm" disabled={currentPage === 1} onClick={() => onPageChange(1)}>
+        Эхлэл
+      </Button>
+      <Button variant="outline" size="sm" disabled={currentPage === 1} onClick={() => onPageChange(currentPage - 1)}>
+        Өмнөх
+      </Button>
+
+      <div className="flex items-center gap-1">
+        {pageNumbers.map((p, idx) =>
+          p === "..." ? (
+            <span key={`ellipsis-${idx}`} className="px-2 text-sm text-muted-foreground">
+              ...
+            </span>
+          ) : (
+            <Button
+              key={p}
+              variant={p === currentPage ? "default" : "outline"}
+              size="sm"
+              className="w-9"
+              onClick={() => onPageChange(p as number)}
+            >
+              {p}
+            </Button>
+          )
+        )}
+      </div>
+
+      <Button
+        variant="outline"
+        size="sm"
+        disabled={currentPage === totalPages}
+        onClick={() => onPageChange(currentPage + 1)}
+      >
+        Дараагийн
+      </Button>
+      <Button
+        variant="outline"
+        size="sm"
+        disabled={currentPage === totalPages}
+        onClick={() => onPageChange(totalPages)}
+      >
+        Төгсгөл
+      </Button>
+
+      <div className="flex items-center gap-1.5 ml-2 pl-2 border-l">
+        <span className="text-xs text-muted-foreground whitespace-nowrap">Хуудас:</span>
+        <Input
+          type="number"
+          min={1}
+          max={totalPages}
+          value={jumpValue}
+          onChange={(e) => setJumpValue(e.target.value)}
+          onKeyDown={(e) => e.key === "Enter" && handleJump()}
+          placeholder={`${currentPage}`}
+          className="w-16 h-8 text-xs text-center"
+        />
+        <span className="text-xs text-muted-foreground">/ {totalPages}</span>
+        <Button size="sm" variant="outline" className="h-8 text-xs" onClick={handleJump}>
+          Очих
+        </Button>
+      </div>
+    </div>
+  );
+}
 
 export default function NewsPage() {
   const [research, setResearch] = useState<NewsItems[]>([]);
@@ -79,18 +175,23 @@ export default function NewsPage() {
   const [newStatus, setNewStatus] = useState(true);
   const [newPosition, setNewPosition] = useState(false);
   const [newIsResearch, setNewIsResearch] = useState(true);
-  const [newLanguage, setNewLanguage] = useState<string>("mn"); // ✅ Added
+  const [newLanguage, setNewLanguage] = useState<string>("mn");
   const [newCreatedAt, setNewCreatedAt] = useState<string>("");
   const [editId, setEditId] = useState<string | null>(null);
 
   const [saveToRndPartner, setSaveToRndPartner] = useState(false);
   const [saveToResearch, setSaveToResearch] = useState(false);
 
+  // ✅ Бонз дэд ангилалд хадгалах сонголтууд
+  const [saveToNature, setSaveToNature] = useState(false);
+  const [saveToPerson, setSaveToPerson] = useState(false);
+  const [saveToDevelopment, setSaveToDevelopment] = useState(false);
+
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [itemToDelete, setItemToDelete] = useState<NewsItems | null>(null);
   const [currentPage, setCurrentPage] = useState(1);
   const [statusFilter, setStatusFilter] = useState<string>("all");
-  const [languageFilter, setLanguageFilter] = useState<string>("all"); // ✅ Added
+  const [languageFilter, setLanguageFilter] = useState<string>("all");
   const [dateSort, setDateSort] = useState<string>("newest");
   const [errorMessage, setErrorMessage] = useState<string>("");
 
@@ -172,7 +273,6 @@ export default function NewsPage() {
       setResearch(research.filter((item) => item.id !== itemToDelete.id));
       setDeleteDialogOpen(false);
       setItemToDelete(null);
-      console.log("Мэдээ амжилттай устгагдлаа");
     } catch (err) {
       console.error("Delete error:", err);
       setErrorMessage("Мэдээ устгахад алдаа гарлаа.");
@@ -211,107 +311,119 @@ export default function NewsPage() {
       setErrorMessage("Гарчиг оруулна уу!");
       return false;
     }
-
     if (!newContents.trim()) {
       setErrorMessage("Контент оруулна уу!");
       return false;
     }
-
     return true;
   };
 
- const handleSave = async () => {
-  if (!validateForm()) return;
+  // ✅ Сонгосон Бонз дэд ангилал бvрт (nature/person/development) ижил payload-оор save хийнэ
+  const saveToBonzCategories = async (payload: UpdatePayload) => {
+    const targets: { flag: boolean; endpoint: string; label: string }[] = [
+      { flag: saveToNature, endpoint: "nature", label: "Байгаль" },
+      { flag: saveToPerson, endpoint: "person", label: "Нийгэм" },
+      { flag: saveToDevelopment, endpoint: "development", label: "Засаглал" },
+    ];
 
-  try {
-    setSaving(true);
-    setErrorMessage("");
-
-    const payload: UpdatePayload = {
-      title: newTitle.trim(),
-      contents: {
-        type: "doc",
-        content: [{ type: "html", html: newContents }],
-      },
-      status: newStatus,
-      position: newPosition,
-      is_research: newIsResearch,
-      language: newLanguage,
-    };
-
-    if (editId && newCreatedAt) {
-      payload.created_at = new Date(newCreatedAt).toISOString();
-    }
-
-    if (editId) {
-      // ✅ Update main news
-      const res = await axios.put(`${API_URL}/api/news/${editId}`, payload);
-      const updatedItem = res.data.data || res.data;
-      setResearch(
-        research.map((item) =>
-          item.id === editId
-            ? { ...updatedItem, contents: newContents }
-            : item
-        )
-      );
-      console.log("Мэдээ амжилттай шинэчлэгдлээ");
-
-      // ✅ Edit үед ч save хийх
-      if (saveToRndPartner) {
-        try {
-          await axios.post(`${API_URL}/api/rndpartner`, payload);
-          console.log("✅ Мэдээ rndpartner руу амжилттай нэмэгдлээ");
-        } catch (error) {
-          console.error("RndPartner save error:", error);
-          setErrorMessage("Хамтын ажиллагаа хэсэгт хадгалахад алдаа гарлаа");
-        }
-      }
-
-      if (saveToResearch) {
-        try {
-          await axios.post(`${API_URL}/api/research`, payload);
-          console.log("✅ Мэдээ research руу амжилттай нэмэгдлээ");
-        } catch (error) {
-          console.error("Research save error:", error);
-          setErrorMessage("Судалгаа хэсэгт хадгалахад алдаа гарлаа");
-        }
-      }
-    } else {
-      // Create new
-      const res = await axios.post(`${API_URL}/api/news`, payload);
-      const newItem = res.data.data || res.data;
-      setResearch([{ ...newItem, contents: newContents }, ...research]);
-      console.log("Шинэ мэдээ амжилттай нэмэгдлээ");
-
-      if (saveToRndPartner) {
-        try {
-          await axios.post(`${API_URL}/api/rndpartner`, payload);
-          console.log("✅ Мэдээ rndpartner руу амжилттай нэмэгдлээ");
-        } catch (error) {
-          console.error("RndPartner save error:", error);
-          setErrorMessage("Хамтын ажиллагаа хэсэгт хадгалахад алдаа гарлаа");
-        }
-      }
-
-      if (saveToResearch) {
-        try {
-          await axios.post(`${API_URL}/api/research`, payload);
-          console.log("✅ Мэдээ research руу амжилттай нэмэгдлээ");
-        } catch (error) {
-          console.error("Research save error:", error);
-          setErrorMessage("Судалгаа хэсэгт хадгалахад алдаа гарлаа");
-        }
+    for (const target of targets) {
+      if (!target.flag) continue;
+      try {
+        await axios.post(`${API_URL}/api/${target.endpoint}`, payload);
+      } catch (error) {
+        console.error(`${target.label} save error:`, error);
+        setErrorMessage(`Бонз (${target.label}) хэсэгт хадгалахад алдаа гарлаа`);
       }
     }
+  };
 
-    resetModal();
-  } catch (err) {
-    console.error("Save error:", err);
-    setErrorMessage("Мэдээ хадгалахад алдаа гарлаа.");
-  } finally {
-    setSaving(false);
-  }
-};
+  const handleSave = async () => {
+    if (!validateForm()) return;
+
+    try {
+      setSaving(true);
+      setErrorMessage("");
+
+      const payload: UpdatePayload = {
+        title: newTitle.trim(),
+        contents: {
+          type: "doc",
+          content: [{ type: "html", html: newContents }],
+        },
+        status: newStatus,
+        position: newPosition,
+        is_research: newIsResearch,
+        language: newLanguage,
+      };
+
+      if (editId && newCreatedAt) {
+        payload.created_at = new Date(newCreatedAt).toISOString();
+      }
+
+      if (editId) {
+        const res = await axios.put(`${API_URL}/api/news/${editId}`, payload);
+        const updatedItem = res.data.data || res.data;
+        setResearch(
+          research.map((item) =>
+            item.id === editId
+              ? { ...updatedItem, contents: newContents }
+              : item
+          )
+        );
+
+        if (saveToRndPartner) {
+          try {
+            await axios.post(`${API_URL}/api/rndpartner`, payload);
+          } catch (error) {
+            console.error("RndPartner save error:", error);
+            setErrorMessage("Хамтын ажиллагаа хэсэгт хадгалахад алдаа гарлаа");
+          }
+        }
+
+        if (saveToResearch) {
+          try {
+            await axios.post(`${API_URL}/api/research`, payload);
+          } catch (error) {
+            console.error("Research save error:", error);
+            setErrorMessage("Судалгаа хэсэгт хадгалахад алдаа гарлаа");
+          }
+        }
+
+        await saveToBonzCategories(payload);
+      } else {
+        const res = await axios.post(`${API_URL}/api/news`, payload);
+        const newItem = res.data.data || res.data;
+        setResearch([{ ...newItem, contents: newContents }, ...research]);
+
+        if (saveToRndPartner) {
+          try {
+            await axios.post(`${API_URL}/api/rndpartner`, payload);
+          } catch (error) {
+            console.error("RndPartner save error:", error);
+            setErrorMessage("Хамтын ажиллагаа хэсэгт хадгалахад алдаа гарлаа");
+          }
+        }
+
+        if (saveToResearch) {
+          try {
+            await axios.post(`${API_URL}/api/research`, payload);
+          } catch (error) {
+            console.error("Research save error:", error);
+            setErrorMessage("Судалгаа хэсэгт хадгалахад алдаа гарлаа");
+          }
+        }
+
+        await saveToBonzCategories(payload);
+      }
+
+      resetModal();
+    } catch (err) {
+      console.error("Save error:", err);
+      setErrorMessage("Мэдээ хадгалахад алдаа гарлаа.");
+    } finally {
+      setSaving(false);
+    }
+  };
 
   const handleTitleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setNewTitle(e.target.value);
@@ -340,7 +452,6 @@ export default function NewsPage() {
       filtered = filtered.filter((item) => item.status === false);
     }
 
-    // ✅ Language filter
     if (languageFilter === "mn") {
       filtered = filtered.filter((item) => item.language === "mn");
     } else if (languageFilter === "en") {
@@ -350,18 +461,13 @@ export default function NewsPage() {
     const sorted = [...filtered].sort((a, b) => {
       const dateA = new Date(a.created_at).getTime();
       const dateB = new Date(b.created_at).getTime();
-
-      if (dateSort === "newest") {
-        return dateB - dateA;
-      } else {
-        return dateA - dateB;
-      }
+      return dateSort === "newest" ? dateB - dateA : dateA - dateB;
     });
 
     return sorted;
   }, [research, query, statusFilter, languageFilter, dateSort]);
 
-  const totalPages = Math.ceil(filteredResearch.length / ITEMS_PER_PAGE);
+  const totalPages = Math.max(1, Math.ceil(filteredResearch.length / ITEMS_PER_PAGE));
   const startIndex = (currentPage - 1) * ITEMS_PER_PAGE;
   const endIndex = startIndex + ITEMS_PER_PAGE;
   const currentItems = filteredResearch.slice(startIndex, endIndex);
@@ -369,11 +475,6 @@ export default function NewsPage() {
   useEffect(() => {
     setCurrentPage(1);
   }, [query, statusFilter, languageFilter, dateSort]);
-
-  const goToPage = (page: number) => {
-    setCurrentPage(page);
-    window.scrollTo({ top: 0, behavior: "smooth" });
-  };
 
   const resetModal = () => {
     setOpen(false);
@@ -383,10 +484,13 @@ export default function NewsPage() {
     setNewStatus(true);
     setNewPosition(false);
     setNewIsResearch(true);
-    setNewLanguage("mn"); // ✅ Reset to default
+    setNewLanguage("mn");
     setNewCreatedAt("");
     setSaveToRndPartner(false);
     setSaveToResearch(false);
+    setSaveToNature(false);
+    setSaveToPerson(false);
+    setSaveToDevelopment(false);
   };
 
   const openNewModal = () => {
@@ -402,8 +506,12 @@ export default function NewsPage() {
     setNewStatus(item.status);
     setNewPosition(item.position);
     setNewIsResearch(item.is_research);
-    setNewLanguage(item.language || "mn"); // ✅ Load existing language
+    setNewLanguage(item.language || "mn");
     setNewCreatedAt(formatDateForInput(item.created_at));
+    // Edit vед bonz сонголтуудыг шинээр эхлvvлнэ (аль хэдийн тэнд байгаа эсэхийг мэдэхгvй тул)
+    setSaveToNature(false);
+    setSaveToPerson(false);
+    setSaveToDevelopment(false);
   };
 
   return (
@@ -431,19 +539,18 @@ export default function NewsPage() {
             <SelectContent>
               <SelectItem value="all">Бүгд</SelectItem>
               <SelectItem value="active">Идэвхтэй</SelectItem>
-              <SelectItem value="inactive">Идэвхгүй</SelectItem>
+              <SelectItem value="inactive">Идэвхгvй</SelectItem>
             </SelectContent>
           </Select>
 
-          {/* ✅ Language Filter */}
           <Select value={languageFilter} onValueChange={setLanguageFilter}>
             <SelectTrigger className="w-full md:w-[140px]">
               <SelectValue placeholder="Хэл" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="all">Бүх хэл</SelectItem>
-              <SelectItem value="mn">🇲🇳 Монгол</SelectItem>
-              <SelectItem value="en">🇬🇧 English</SelectItem>
+              <SelectItem value="all">Бvх хэл</SelectItem>
+              <SelectItem value="mn">Монгол</SelectItem>
+              <SelectItem value="en">English</SelectItem>
             </SelectContent>
           </Select>
 
@@ -457,23 +564,18 @@ export default function NewsPage() {
             </SelectContent>
           </Select>
 
-          <Button
-            className="bg-none rounded-xl w-full md:w-[200px] h-10 border border-gray-500 hover:bg-gray-500 hover:text-white transition-all"
-            onClick={openNewModal}
-          >
+          <Button className="ml-auto" onClick={openNewModal}>
             + Шинэ мэдээ нэмэх
           </Button>
         </div>
 
         <p className="text-sm text-muted-foreground">
-          Нийт ( {filteredResearch.length} ) мэдээ олдлоо
+          Нийт ({filteredResearch.length}) мэдээ олдлоо
         </p>
       </div>
 
       {loading ? (
-        <p className="text-center text-muted-foreground py-12">
-          Уншиж байна ...
-        </p>
+        <p className="text-center text-muted-foreground py-12">Уншиж байна ...</p>
       ) : currentItems.length === 0 ? (
         <div className="text-center text-muted-foreground py-12">
           <Empty>
@@ -481,16 +583,16 @@ export default function NewsPage() {
               <EmptyMedia variant="icon">
                 <Folder />
               </EmptyMedia>
-              <EmptyTitle>Мэдээ олдсонгүй.</EmptyTitle>
+              <EmptyTitle>Мэдээ олдсонгvй.</EmptyTitle>
               <EmptyDescription>
-                Та одоогоор ямар ч мэдээ үүсгээгүй байна.
+                Та одоогоор ямар ч мэдээ vvсгээгvй байна.
               </EmptyDescription>
             </EmptyHeader>
           </Empty>
         </div>
       ) : (
         <>
-          <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
             {currentItems.map((item) => {
               const htmlContent =
                 typeof item.contents === "string" ? item.contents : "";
@@ -501,91 +603,86 @@ export default function NewsPage() {
               return (
                 <div
                   key={item.id}
-                  className="bg-card rounded-2xl shadow-md overflow-hidden cursor-pointer flex flex-col transition-all duration-300 ease-in-out hover:scale-100 hover:shadow-xl h-[400px]"
+                  className="bg-card rounded-xl overflow-hidden shadow-sm hover:shadow-md transition-shadow duration-200 border flex flex-col"
                 >
-                  {firstImg && (
+                  {firstImg ? (
                     <Image
-                      width={200}
-                      height={150}
+                      width={400}
+                      height={140}
                       src={firstImg}
                       alt={item.title}
-                      className="w-full h-40 object-cover"
+                      className="w-full h-32 object-cover"
                       onError={handleImageError}
                     />
+                  ) : (
+                    <div className="w-full h-32 bg-muted flex items-center justify-center text-muted-foreground text-xs">
+                      No image
+                    </div>
                   )}
 
-                  <div className="p-4 flex-1 flex flex-col justify-between">
-                    <div>
-                      <div className="flex items-center gap-2 mb-2">
-                        <h3 className="font-semibold truncate flex-1">
-                          {item.title}
-                        </h3>
-                        {/* ✅ Show language badge */}
-                        <span
-                          className={`text-xs px-2 py-1 rounded ${
-                            item.language === "mn"
-                              ? "bg-blue-100 text-blue-700"
-                              : "bg-green-100 text-green-700"
-                          }`}
-                        >
-                          {item.language === "mn" ? "🇲🇳 MN" : "🇬🇧 EN"}
+                  <div className="p-3.5 flex-1 flex flex-col">
+                    <div className="flex items-center gap-1.5 mb-1.5">
+                      <h3 className="font-semibold text-sm line-clamp-1 flex-1">
+                        {item.title}
+                      </h3>
+                      <span
+                        className={`text-[10px] px-1.5 py-0.5 rounded shrink-0 ${
+                          item.language === "mn"
+                            ? "bg-blue-100 text-blue-700"
+                            : "bg-green-100 text-green-700"
+                        }`}
+                      >
+                        {item.language === "mn" ? "MN" : "EN"}
+                      </span>
+                      {item.position && (
+                        <span className="text-[10px] bg-yellow-500/80 px-1.5 py-0.5 rounded text-white shrink-0">
+                          ⭐
                         </span>
-                        {item.position && (
-                          <span className="text-xs bg-yellow-500 text-white px-2 py-1 rounded">
-                            ⭐
-                          </span>
-                        )}
-                        {item.is_research && (
-                          <span className="text-xs bg-blue-500 text-white px-2 py-1 rounded">
-                            🔬
-                          </span>
-                        )}
-                      </div>
-                      <div className="flex items-center justify-between gap-2 mb-2">
-                        <span
-                          className={`text-xs px-2 py-1 rounded ${
-                            item.status
-                              ? "bg-green-500 text-white"
-                              : "bg-gray-500 text-white"
-                          }`}
-                        >
-                          {item.status ? "Идэвхтэй" : "Идэвхгүй"}
-                        </span>
-                        <span className="text-xs text-muted-foreground">
-                          👁 {item.viewers}
-                        </span>
-                      </div>
-                      <p className="text-xs text-muted-foreground mb-2">
-                        📅{" "}
-                        {new Date(item.created_at).toLocaleDateString("mn-MN")}
-                      </p>
-                      {item.updated_at && (
-                        <p className="text-xs text-muted-foreground/70 mb-2">
-                          ✏️{" "}
-                          {new Date(item.updated_at).toLocaleDateString(
-                            "mn-MN"
-                          )}
-                        </p>
                       )}
-                      <p className="text-sm text-muted-foreground line-clamp-3">
-                        {textPreview}
-                      </p>
+                      {item.is_research && (
+                        <span className="text-[10px] bg-blue-600/80 px-1.5 py-0.5 rounded text-white shrink-0">
+                          🔬
+                        </span>
+                      )}
                     </div>
 
-                    <div className="mt-4 flex gap-2">
+                    <div className="flex items-center justify-between mb-1.5">
+                      <span
+                        className={`text-[10px] px-2 py-0.5 rounded-full ${
+                          item.status
+                            ? "bg-green-500/80 text-white"
+                            : "bg-gray-400 text-white"
+                        }`}
+                      >
+                        {item.status ? "Идэвхтэй" : "Идэвхгvй"}
+                      </span>
+                      <span className="text-[10px] text-muted-foreground">
+                        👁 {item.viewers}
+                      </span>
+                    </div>
+
+                    <p className="text-[11px] text-muted-foreground mb-1.5">
+                      {new Date(item.created_at).toLocaleDateString("mn-MN")}
+                    </p>
+
+                    <p className="text-xs text-muted-foreground line-clamp-2 mb-2">
+                      {textPreview}
+                    </p>
+
+                    <div className="flex gap-2 mt-auto pt-1">
                       <Button
-                        className="cursor-pointer"
                         size="sm"
                         variant="outline"
                         onClick={() => openEditModal(item)}
+                        className="flex-1 h-8 text-xs"
                       >
                         Засах
                       </Button>
                       <Button
-                        className="cursor-pointer"
                         size="sm"
                         variant="destructive"
                         onClick={() => openDeleteDialog(item)}
+                        className="flex-1 h-8 text-xs"
                       >
                         Устгах
                       </Button>
@@ -596,61 +693,11 @@ export default function NewsPage() {
             })}
           </div>
 
-          {totalPages > 1 && (
-            <div className="flex justify-center items-center gap-2 mt-8">
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => goToPage(currentPage - 1)}
-                disabled={currentPage === 1}
-              >
-                Өмнөх
-              </Button>
-
-              <div className="flex gap-1">
-                {Array.from({ length: totalPages }, (_, i) => i + 1).map(
-                  (page) => {
-                    if (
-                      page === 1 ||
-                      page === totalPages ||
-                      (page >= currentPage - 1 && page <= currentPage + 1)
-                    ) {
-                      return (
-                        <Button
-                          key={page}
-                          variant={currentPage === page ? "default" : "outline"}
-                          size="sm"
-                          onClick={() => goToPage(page)}
-                          className="w-10"
-                        >
-                          {page}
-                        </Button>
-                      );
-                    } else if (
-                      page === currentPage - 2 ||
-                      page === currentPage + 2
-                    ) {
-                      return (
-                        <span key={page} className="px-2">
-                          ...
-                        </span>
-                      );
-                    }
-                    return null;
-                  }
-                )}
-              </div>
-
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => goToPage(currentPage + 1)}
-                disabled={currentPage === totalPages}
-              >
-                Дараах
-              </Button>
-            </div>
-          )}
+          <Pagination
+            currentPage={currentPage}
+            totalPages={totalPages}
+            onPageChange={setCurrentPage}
+          />
         </>
       )}
 
@@ -675,21 +722,17 @@ export default function NewsPage() {
               />
 
               <div className="flex flex-wrap gap-6">
-                {/* ✅ Language Selector */}
                 <div className="flex items-center gap-2">
-                  <Label
-                    htmlFor="language"
-                    className="text-sm whitespace-nowrap font-medium"
-                  >
-                    🌐 Хэл:
+                  <Label htmlFor="language" className="text-sm whitespace-nowrap font-medium">
+                    Хэл:
                   </Label>
                   <Select value={newLanguage} onValueChange={setNewLanguage}>
                     <SelectTrigger className="w-[150px]">
                       <SelectValue placeholder="Хэл сонгох" />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="mn">🇲🇳 Монгол</SelectItem>
-                      <SelectItem value="en">🇬🇧 English</SelectItem>
+                      <SelectItem value="mn">Монгол</SelectItem>
+                      <SelectItem value="en">English</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
@@ -698,9 +741,7 @@ export default function NewsPage() {
                   <Checkbox
                     id="status"
                     checked={newStatus}
-                    onCheckedChange={(checked) =>
-                      setNewStatus(checked as boolean)
-                    }
+                    onCheckedChange={(checked) => setNewStatus(checked as boolean)}
                   />
                   <Label htmlFor="status" className="text-sm">
                     Идэвхтэй
@@ -711,50 +752,15 @@ export default function NewsPage() {
                   <Checkbox
                     id="position"
                     checked={newPosition}
-                    onCheckedChange={(checked) =>
-                      setNewPosition(checked as boolean)
-                    }
+                    onCheckedChange={(checked) => setNewPosition(checked as boolean)}
                   />
                   <Label htmlFor="position">Онцолсон</Label>
-                </div>
-
-                {/* ✅ Checkbox-ууд editId байхад ч харагдана */}
-                <div className="flex items-center space-x-2">
-                  <Checkbox
-                    id="saveToRndPartner"
-                    checked={saveToRndPartner}
-                    onCheckedChange={(checked) =>
-                      setSaveToRndPartner(checked as boolean)
-                    }
-                  />
-                  <Label
-                    htmlFor="saveToRndPartner"
-                    className="text-sm font-medium"
-                  >
-                    Түншлэл Хамтын ажиллагаа
-                  </Label>
-                </div>
-
-                <div className="flex items-center space-x-2">
-                  <Checkbox
-                    id="saveToResearch"
-                    checked={saveToResearch}
-                    onCheckedChange={(checked) =>
-                      setSaveToResearch(checked as boolean)
-                    }
-                  />
-                  <Label
-                    htmlFor="saveToResearch"
-                    className="text-sm font-medium"
-                  >
-                    Судалгаа, нийтлэлүүд
-                  </Label>
                 </div>
 
                 {editId && (
                   <div className="flex items-center gap-2">
                     <Label htmlFor="date" className="text-sm whitespace-nowrap">
-                      📅 Огноо:
+                      Огноо:
                     </Label>
                     <Input
                       id="date"
@@ -765,6 +771,72 @@ export default function NewsPage() {
                     />
                   </div>
                 )}
+              </div>
+
+              {/* ✅ Хадгалах хэсэг — Хамтын ажиллагаа / Судалгаа */}
+              <div className="flex flex-wrap gap-6 pt-1 border-t pt-3">
+                <div className="flex items-center space-x-2">
+                  <Checkbox
+                    id="saveToRndPartner"
+                    checked={saveToRndPartner}
+                    onCheckedChange={(checked) => setSaveToRndPartner(checked as boolean)}
+                  />
+                  <Label htmlFor="saveToRndPartner" className="text-sm font-medium">
+                    Түншлэл Хамтын ажиллагаа
+                  </Label>
+                </div>
+
+                <div className="flex items-center space-x-2">
+                  <Checkbox
+                    id="saveToResearch"
+                    checked={saveToResearch}
+                    onCheckedChange={(checked) => setSaveToResearch(checked as boolean)}
+                  />
+                  <Label htmlFor="saveToResearch" className="text-sm font-medium">
+                    Судалгаа, нийтлэлvvд
+                  </Label>
+                </div>
+              </div>
+
+              {/* ✅ Бонз дэд ангилалд хадгалах сонголтууд */}
+              <div className="flex flex-col gap-2 pt-3 border-t">
+                <Label className="text-sm font-semibold text-gray-700">
+                  Бонз хэсэгт нэмэлтээр хадгалах
+                </Label>
+                <div className="flex flex-wrap gap-6">
+                  <div className="flex items-center space-x-2">
+                    <Checkbox
+                      id="saveToNature"
+                      checked={saveToNature}
+                      onCheckedChange={(checked) => setSaveToNature(checked as boolean)}
+                    />
+                    <Label htmlFor="saveToNature" className="text-sm font-medium">
+                      Байгаль
+                    </Label>
+                  </div>
+
+                  <div className="flex items-center space-x-2">
+                    <Checkbox
+                      id="saveToPerson"
+                      checked={saveToPerson}
+                      onCheckedChange={(checked) => setSaveToPerson(checked as boolean)}
+                    />
+                    <Label htmlFor="saveToPerson" className="text-sm font-medium">
+                      Нийгэм
+                    </Label>
+                  </div>
+
+                  <div className="flex items-center space-x-2">
+                    <Checkbox
+                      id="saveToDevelopment"
+                      checked={saveToDevelopment}
+                      onCheckedChange={(checked) => setSaveToDevelopment(checked as boolean)}
+                    />
+                    <Label htmlFor="saveToDevelopment" className="text-sm font-medium">
+                      Засаглал
+                    </Label>
+                  </div>
+                </div>
               </div>
 
               <SimpleEditor
@@ -796,8 +868,8 @@ export default function NewsPage() {
                   <span className="font-medium text-foreground">
                     {itemToDelete.title}
                   </span>{" "}
-                  гэсэн мэдээг бүрмөсөн устгах гэж байна. Энэ үйлдлийг буцаах
-                  боломжгүй.
+                  гэсэн мэдээг бvрмөсөн устгах гэж байна. Энэ vйлдлийг буцаах
+                  боломжгvй.
                 </>
               )}
             </AlertDialogDescription>
