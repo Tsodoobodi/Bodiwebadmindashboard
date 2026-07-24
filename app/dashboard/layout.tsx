@@ -6,7 +6,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     <div
       className="flex min-h-screen min-w-screen"
       style={{
-        backgroundImage: 'url(/images/1.jpg)',
+        backgroundImage: 'url(/images/bg.jpg)',
         backgroundSize: 'cover',
         backgroundPosition: 'center',
         backgroundRepeat: 'no-repeat',
