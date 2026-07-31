@@ -8,6 +8,12 @@ import { surveyApi, Survey, SurveyStats } from '@/lib/surveyApi';
 
 const ITEMS_PER_PAGE = 9;
 
+// ---- Shared glass tokens (matching Dashboard / Sidebar / Header / News / VideoNews / RnD pages) ----
+const GLASS_PANEL =
+  'rounded-2xl border border-white/12 bg-white/[0.05] backdrop-blur-xl shadow-[0_8px_32px_rgba(0,0,0,0.35)]';
+const GLASS_OUTLINE_BTN =
+  'border border-white/15 bg-white/5 text-white/75 hover:bg-white/10 hover:text-white';
+
 function Pagination({
   currentPage,
   totalPages,
@@ -38,18 +44,18 @@ function Pagination({
   if (totalPages <= 1) return null;
 
   return (
-    <div className="flex flex-wrap items-center justify-center gap-2 pt-8">
+    <div className={`flex flex-wrap items-center justify-center gap-2 mt-8 p-3 ${GLASS_PANEL}`}>
       <button
         onClick={() => onPageChange(1)}
         disabled={currentPage === 1}
-        className="px-3 py-1.5 rounded-lg text-sm font-semibold bg-gray-100 hover:bg-gray-200 text-gray-700 disabled:opacity-40 transition"
+        className={`px-3 py-1.5 rounded-lg text-sm font-semibold disabled:opacity-40 transition ${GLASS_OUTLINE_BTN}`}
       >
         Эхлэл
       </button>
       <button
         onClick={() => onPageChange(currentPage - 1)}
         disabled={currentPage === 1}
-        className="px-3 py-1.5 rounded-lg text-sm font-semibold bg-gray-100 hover:bg-gray-200 text-gray-700 disabled:opacity-40 transition"
+        className={`px-3 py-1.5 rounded-lg text-sm font-semibold disabled:opacity-40 transition ${GLASS_OUTLINE_BTN}`}
       >
         Өмнөх
       </button>
@@ -57,7 +63,7 @@ function Pagination({
       <div className="flex items-center gap-1">
         {pageNumbers.map((p, idx) =>
           p === '...' ? (
-            <span key={`ellipsis-${idx}`} className="px-2 text-sm text-gray-400">
+            <span key={`ellipsis-${idx}`} className="px-2 text-sm text-white/35">
               ...
             </span>
           ) : (
@@ -66,8 +72,8 @@ function Pagination({
               onClick={() => onPageChange(p as number)}
               className={`w-9 h-9 rounded-lg text-sm font-semibold transition ${
                 p === currentPage
-                  ? 'bg-blue-600 text-white'
-                  : 'bg-gray-100 hover:bg-gray-200 text-gray-700'
+                  ? 'bg-blue-500 text-white shadow-[0_0_16px_rgba(59,130,246,0.45)]'
+                  : GLASS_OUTLINE_BTN
               }`}
             >
               {p}
@@ -79,20 +85,20 @@ function Pagination({
       <button
         onClick={() => onPageChange(currentPage + 1)}
         disabled={currentPage === totalPages}
-        className="px-3 py-1.5 rounded-lg text-sm font-semibold bg-gray-100 hover:bg-gray-200 text-gray-700 disabled:opacity-40 transition"
+        className={`px-3 py-1.5 rounded-lg text-sm font-semibold disabled:opacity-40 transition ${GLASS_OUTLINE_BTN}`}
       >
         Дараагийн
       </button>
       <button
         onClick={() => onPageChange(totalPages)}
         disabled={currentPage === totalPages}
-        className="px-3 py-1.5 rounded-lg text-sm font-semibold bg-gray-100 hover:bg-gray-200 text-gray-700 disabled:opacity-40 transition"
+        className={`px-3 py-1.5 rounded-lg text-sm font-semibold disabled:opacity-40 transition ${GLASS_OUTLINE_BTN}`}
       >
         Төгсгөл
       </button>
 
-      <div className="flex items-center gap-1.5 ml-2 pl-3 border-l border-gray-200">
-        <span className="text-xs text-gray-500 whitespace-nowrap">Хуудас:</span>
+      <div className="flex items-center gap-1.5 ml-2 pl-3 border-l border-white/15">
+        <span className="text-xs text-white/40 whitespace-nowrap">Хуудас:</span>
         <input
           type="number"
           min={1}
@@ -101,12 +107,12 @@ function Pagination({
           onChange={(e) => setJumpValue(e.target.value)}
           onKeyDown={(e) => e.key === 'Enter' && handleJump()}
           placeholder={`${currentPage}`}
-          className="w-14 h-8 text-xs text-center rounded-lg border border-gray-200 outline-none focus:border-blue-500"
+          className="w-14 h-8 text-xs text-center rounded-lg border border-white/15 bg-white/5 text-white outline-none focus:border-white/30"
         />
-        <span className="text-xs text-gray-500">/ {totalPages}</span>
+        <span className="text-xs text-white/40">/ {totalPages}</span>
         <button
           onClick={handleJump}
-          className="px-2.5 h-8 rounded-lg text-xs font-semibold bg-gray-100 hover:bg-gray-200 text-gray-700 transition"
+          className={`px-2.5 h-8 rounded-lg text-xs font-semibold transition ${GLASS_OUTLINE_BTN}`}
         >
           Очих
         </button>
@@ -234,9 +240,9 @@ export default function SurveyPage() {
 
   const getStatusBadge = (status: string) => {
     const styles = {
-      active: 'bg-green-100 text-green-700 border-green-200',
-      inactive: 'bg-gray-100 text-gray-600 border-gray-200',
-      draft: 'bg-yellow-100 text-yellow-700 border-yellow-200',
+      active: 'bg-emerald-400/15 text-emerald-200 border-emerald-400/25',
+      inactive: 'bg-white/10 text-white/60 border-white/15',
+      draft: 'bg-amber-400/15 text-amber-200 border-amber-400/25',
     };
 
     const labels = {
@@ -263,8 +269,8 @@ export default function SurveyPage() {
       <div className="p-8 max-w-7xl mx-auto">
         <div className="flex items-center justify-center h-64">
           <div className="text-center">
-            <RefreshCw className="w-8 h-8 text-blue-600 animate-spin mx-auto mb-3" />
-            <p className="text-gray-500 text-sm">Ачааллаж байна...</p>
+            <RefreshCw className="w-8 h-8 text-blue-400 animate-spin mx-auto mb-3" />
+            <p className="text-white/45 text-sm">Ачааллаж байна...</p>
           </div>
         </div>
       </div>
@@ -277,10 +283,10 @@ export default function SurveyPage() {
       <div className="mb-8">
         <div className="flex items-center justify-between mb-6">
           <div>
-            <h1 className="text-2xl font-bold text-gray-800 mb-1">
+            <h1 className="text-2xl font-bold text-white mb-1 tracking-tight">
               Санал асуулага
             </h1>
-            <p className="text-gray-500 text-sm">
+            <p className="text-white/45 text-sm">
               Google Forms болон бусад санал асуулгын холбоосуудыг удирдах
             </p>
           </div>
@@ -288,7 +294,7 @@ export default function SurveyPage() {
           <div className="flex gap-2">
             <button
               onClick={fetchData}
-              className="flex items-center gap-2 bg-gray-100 hover:bg-gray-200 text-gray-700 px-4 py-2.5 rounded-lg text-sm font-semibold transition"
+              className={`flex items-center gap-2 px-4 py-2.5 rounded-lg text-sm font-semibold transition cursor-pointer ${GLASS_OUTLINE_BTN}`}
             >
               <RefreshCw size={16} />
               Шинэчлэх
@@ -296,7 +302,7 @@ export default function SurveyPage() {
 
             <button
               onClick={() => setShowModal(true)}
-              className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2.5 rounded-lg text-sm font-semibold transition"
+              className="flex items-center gap-2 bg-blue-500/90 hover:bg-blue-500 text-white px-4 py-2.5 rounded-lg text-sm font-semibold transition cursor-pointer shadow-[0_0_20px_rgba(59,130,246,0.35)]"
             >
               <Plus size={16} />
               Шинэ санал асуулага
@@ -307,62 +313,62 @@ export default function SurveyPage() {
         {/* Stats Cards */}
         {stats && (
           <div className="grid grid-cols-2 md:grid-cols-5 gap-3 mb-6">
-            <div className="bg-white rounded-xl p-4 border border-gray-100">
+            <div className={`p-4 ${GLASS_PANEL}`}>
               <div className="flex items-center gap-3">
-                <div className="p-2 bg-blue-50 rounded-lg">
-                  <BarChart3 size={18} className="text-blue-600" />
+                <div className="p-2 rounded-lg bg-blue-400/15">
+                  <BarChart3 size={18} className="text-blue-300" />
                 </div>
                 <div>
-                  <p className="text-xl font-bold text-gray-800">{stats.total}</p>
-                  <p className="text-xs text-gray-500">Нийт</p>
+                  <p className="text-xl font-bold text-white">{stats.total}</p>
+                  <p className="text-xs text-white/45">Нийт</p>
                 </div>
               </div>
             </div>
 
-            <div className="bg-white rounded-xl p-4 border border-gray-100">
+            <div className={`p-4 ${GLASS_PANEL}`}>
               <div className="flex items-center gap-3">
-                <div className="p-2 bg-green-50 rounded-lg">
-                  <div className="w-2 h-2 bg-green-600 rounded-full"></div>
+                <div className="p-2 rounded-lg bg-emerald-400/15">
+                  <div className="w-2 h-2 bg-emerald-400 rounded-full"></div>
                 </div>
                 <div>
-                  <p className="text-xl font-bold text-gray-800">{stats.active}</p>
-                  <p className="text-xs text-gray-500">Идэвхтэй</p>
+                  <p className="text-xl font-bold text-white">{stats.active}</p>
+                  <p className="text-xs text-white/45">Идэвхтэй</p>
                 </div>
               </div>
             </div>
 
-            <div className="bg-white rounded-xl p-4 border border-gray-100">
+            <div className={`p-4 ${GLASS_PANEL}`}>
               <div className="flex items-center gap-3">
-                <div className="p-2 bg-gray-50 rounded-lg">
-                  <div className="w-2 h-2 bg-gray-500 rounded-full"></div>
+                <div className="p-2 rounded-lg bg-white/10">
+                  <div className="w-2 h-2 bg-white/50 rounded-full"></div>
                 </div>
                 <div>
-                  <p className="text-xl font-bold text-gray-800">{stats.inactive}</p>
-                  <p className="text-xs text-gray-500">Идэвхгүй</p>
+                  <p className="text-xl font-bold text-white">{stats.inactive}</p>
+                  <p className="text-xs text-white/45">Идэвхгүй</p>
                 </div>
               </div>
             </div>
 
-            <div className="bg-white rounded-xl p-4 border border-gray-100">
+            <div className={`p-4 ${GLASS_PANEL}`}>
               <div className="flex items-center gap-3">
-                <div className="p-2 bg-yellow-50 rounded-lg">
-                  <div className="w-2 h-2 bg-yellow-600 rounded-full"></div>
+                <div className="p-2 rounded-lg bg-amber-400/15">
+                  <div className="w-2 h-2 bg-amber-400 rounded-full"></div>
                 </div>
                 <div>
-                  <p className="text-xl font-bold text-gray-800">{stats.draft}</p>
-                  <p className="text-xs text-gray-500">Ноорог</p>
+                  <p className="text-xl font-bold text-white">{stats.draft}</p>
+                  <p className="text-xs text-white/45">Ноорог</p>
                 </div>
               </div>
             </div>
 
-            <div className="bg-white rounded-xl p-4 border border-gray-100">
+            <div className={`p-4 ${GLASS_PANEL}`}>
               <div className="flex items-center gap-3">
-                <div className="p-2 bg-red-50 rounded-lg">
-                  <Trash2 size={16} className="text-red-500" />
+                <div className="p-2 rounded-lg bg-red-400/15">
+                  <Trash2 size={16} className="text-red-300" />
                 </div>
                 <div>
-                  <p className="text-xl font-bold text-gray-800">{stats.deleted}</p>
-                  <p className="text-xs text-gray-500">Устгасан</p>
+                  <p className="text-xl font-bold text-white">{stats.deleted}</p>
+                  <p className="text-xs text-white/45">Устгасан</p>
                 </div>
               </div>
             </div>
@@ -372,10 +378,10 @@ export default function SurveyPage() {
         {/* Filter */}
         <div className="flex gap-2">
           {[
-            { value: '', label: 'Бүгд', active: 'bg-blue-600' },
-            { value: 'active', label: 'Идэвхтэй', active: 'bg-green-600' },
-            { value: 'draft', label: 'Ноорог', active: 'bg-yellow-600' },
-            { value: 'inactive', label: 'Идэвхгүй', active: 'bg-gray-600' },
+            { value: '', label: 'Бүгд', active: 'bg-blue-500 shadow-[0_0_16px_rgba(59,130,246,0.4)]' },
+            { value: 'active', label: 'Идэвхтэй', active: 'bg-emerald-500 shadow-[0_0_16px_rgba(16,185,129,0.4)]' },
+            { value: 'draft', label: 'Ноорог', active: 'bg-amber-500 shadow-[0_0_16px_rgba(245,158,11,0.4)]' },
+            { value: 'inactive', label: 'Идэвхгүй', active: 'bg-white/25' },
           ].map((f) => (
             <button
               key={f.value}
@@ -383,7 +389,7 @@ export default function SurveyPage() {
               className={`px-3.5 py-1.5 rounded-lg text-sm font-semibold transition ${
                 filterStatus === f.value
                   ? `${f.active} text-white`
-                  : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                  : GLASS_OUTLINE_BTN
               }`}
             >
               {f.label}
@@ -393,8 +399,8 @@ export default function SurveyPage() {
       </div>
 
       {error && (
-        <div className="mb-6 bg-red-50 border border-red-200 rounded-lg p-3">
-          <p className="text-red-600 text-sm font-medium">{error}</p>
+        <div className="mb-6 bg-red-400/10 border border-red-400/30 backdrop-blur-xl rounded-2xl p-3">
+          <p className="text-red-200 text-sm font-medium">{error}</p>
         </div>
       )}
 
@@ -405,10 +411,10 @@ export default function SurveyPage() {
             {paginatedSurveys.map((survey) => (
               <div
                 key={survey.id}
-                className="bg-white rounded-xl border border-gray-100 overflow-hidden hover:shadow-md transition-shadow duration-200"
+                className={`overflow-hidden transition-all duration-200 hover:-translate-y-1 hover:bg-white/[0.08] ${GLASS_PANEL}`}
               >
                 <div
-                  className="relative h-32 bg-gray-50 overflow-hidden group cursor-pointer"
+                  className="relative h-32 bg-white/[0.03] overflow-hidden group cursor-pointer"
                   onClick={() => handlePreview(survey)}
                 >
                   <iframe
@@ -428,12 +434,12 @@ export default function SurveyPage() {
                 <div className="p-4">
                   <div className="mb-3">
                     <div className="flex items-start justify-between gap-2 mb-1.5">
-                      <h3 className="text-sm font-semibold text-gray-800 line-clamp-2 flex-1">
+                      <h3 className="text-sm font-semibold text-white line-clamp-2 flex-1">
                         {survey.title}
                       </h3>
                       {getStatusBadge(survey.status)}
                     </div>
-                    <p className="text-xs text-gray-400">
+                    <p className="text-xs text-white/35">
                       {new Date(survey.created_at).toLocaleDateString('mn-MN', {
                         year: 'numeric',
                         month: 'long',
@@ -446,18 +452,18 @@ export default function SurveyPage() {
                     href={survey.embed_url}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="flex items-center gap-1.5 text-blue-600 hover:text-blue-700 text-xs mb-3"
+                    className="flex items-center gap-1.5 text-blue-300 hover:text-blue-200 text-xs mb-3"
                   >
                     <LinkIcon size={13} />
                     <span className="truncate flex-1">{survey.embed_url}</span>
                     <ExternalLink size={13} />
                   </a>
 
-                  <div className="flex gap-2 pt-3 border-t border-gray-100">
+                  <div className="flex gap-2 pt-3 border-t border-white/10">
                     <button
                       onClick={() => handleEdit(survey)}
                       disabled={actionLoading}
-                      className="flex-1 flex items-center justify-center gap-1.5 bg-gray-100 hover:bg-gray-200 text-gray-700 h-8 rounded-lg text-xs font-semibold transition disabled:opacity-50"
+                      className={`flex-1 flex items-center justify-center gap-1.5 h-8 rounded-lg text-xs font-semibold transition disabled:opacity-50 cursor-pointer ${GLASS_OUTLINE_BTN}`}
                     >
                       <Edit2 size={13} />
                       Засах
@@ -465,7 +471,7 @@ export default function SurveyPage() {
                     <button
                       onClick={() => handleDelete(survey.id)}
                       disabled={actionLoading}
-                      className="flex-1 flex items-center justify-center gap-1.5 bg-red-50 hover:bg-red-100 text-red-600 h-8 rounded-lg text-xs font-semibold transition disabled:opacity-50"
+                      className="flex-1 flex items-center justify-center gap-1.5 bg-red-500/15 hover:bg-red-500/25 text-red-300 h-8 rounded-lg text-xs font-semibold transition disabled:opacity-50 border border-red-400/20 cursor-pointer"
                     >
                       <Trash2 size={13} />
                       Устгах
@@ -483,21 +489,21 @@ export default function SurveyPage() {
           />
         </>
       ) : (
-        <div className="text-center py-16">
-          <div className="inline-block p-5 bg-gray-50 rounded-full mb-4">
-            <LinkIcon size={36} className="text-gray-300" />
+        <div className={`text-center py-16 ${GLASS_PANEL}`}>
+          <div className="inline-block p-5 bg-white/5 rounded-full mb-4">
+            <LinkIcon size={36} className="text-white/25" />
           </div>
-          <h3 className="text-lg font-semibold text-gray-700 mb-1">
+          <h3 className="text-lg font-semibold text-white mb-1">
             Санал асуулга байхгүй байна
           </h3>
-          <p className="text-gray-500 text-sm mb-5">
+          <p className="text-white/45 text-sm mb-5">
             {filterStatus
               ? `"${filterStatus}" статустай санал асуулга олдсонгүй`
               : 'Эхний санал асуулгаа үүсгэж эхлээрэй!'}
           </p>
           <button
             onClick={() => setShowModal(true)}
-            className="inline-flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white px-5 py-2.5 rounded-lg text-sm font-semibold transition"
+            className="inline-flex items-center gap-2 bg-blue-500/90 hover:bg-blue-500 text-white px-5 py-2.5 rounded-lg text-sm font-semibold transition shadow-[0_0_20px_rgba(59,130,246,0.35)] cursor-pointer"
           >
             <Plus size={16} />
             Шинэ санал асуулага
@@ -550,7 +556,7 @@ export default function SurveyPage() {
         )}
       </AnimatePresence>
 
-      {/* Create/Edit Modal */}
+      {/* Create/Edit Modal — plain white surface, same as the other editors, since typing over glass is hard to read */}
       <AnimatePresence>
         {showModal && (
           <motion.div
@@ -558,7 +564,7 @@ export default function SurveyPage() {
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             transition={{ duration: 0.15 }}
-            className="fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-4"
+            className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4"
             onClick={handleCloseModal}
           >
             <motion.div
@@ -567,7 +573,7 @@ export default function SurveyPage() {
               exit={{ scale: 0.97, opacity: 0 }}
               transition={{ duration: 0.15 }}
               onClick={(e) => e.stopPropagation()}
-              className="bg-white rounded-2xl shadow-xl p-6 max-w-lg w-full"
+              className="bg-white border border-gray-200 rounded-2xl shadow-2xl p-6 max-w-lg w-full"
             >
               <div className="mb-5">
                 <h2 className="text-lg font-bold text-gray-800 mb-1">

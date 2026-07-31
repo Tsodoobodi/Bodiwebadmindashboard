@@ -67,6 +67,28 @@ const API_URL =
 
 const ITEMS_PER_PAGE = 9;
 
+// ---- Shared glass style tokens (kept consistent with Dashboard / Sidebar / Header) ----
+const GLASS_PANEL =
+  "rounded-2xl border border-white/12 bg-white/[0.05] backdrop-blur-xl shadow-[0_8px_32px_rgba(0,0,0,0.35)]";
+const GLASS_INPUT =
+  "bg-white/5 border-white/15 text-white placeholder:text-white/35 focus-visible:ring-white/25 focus-visible:border-white/30";
+const GLASS_TRIGGER =
+  "bg-white/5 border-white/15 text-white data-[placeholder]:text-white/40 focus:ring-white/25";
+const GLASS_CONTENT = "bg-black/80 backdrop-blur-2xl border-white/15 text-white";
+const GLASS_ITEM = "text-white/80 focus:bg-white/10 focus:text-white";
+const GLASS_OUTLINE_BTN =
+  "border-white/15 bg-white/5 text-white/75 hover:bg-white/10 hover:text-white";
+
+// ---- Light tokens, used only inside the news editor modal ----
+// Typing/reading form content over a translucent glass panel was hard to read,
+// so the modal itself stays a plain white surface while the rest of the page stays glassy.
+const LIGHT_INPUT = "bg-white border-gray-200 text-gray-800 placeholder:text-gray-400";
+const LIGHT_TRIGGER = "bg-white border-gray-200 text-gray-800";
+const LIGHT_CONTENT = "bg-white border-gray-200 text-gray-800";
+const LIGHT_ITEM = "text-gray-700 focus:bg-gray-100 focus:text-gray-900";
+const LIGHT_OUTLINE_BTN = "border-gray-200 bg-white text-gray-600 hover:bg-gray-50 hover:text-gray-900";
+const LIGHT_CHECKBOX = "border-gray-300 data-[state=checked]:bg-blue-600 data-[state=checked]:border-blue-600";
+
 function Pagination({
   currentPage,
   totalPages,
@@ -97,18 +119,30 @@ function Pagination({
   if (totalPages <= 1) return null;
 
   return (
-    <div className="flex flex-wrap items-center justify-center gap-2 pt-2">
-      <Button variant="outline" size="sm" disabled={currentPage === 1} onClick={() => onPageChange(1)}>
+    <div className={`flex flex-wrap items-center justify-center gap-2 pt-2 p-3 ${GLASS_PANEL}`}>
+      <Button
+        variant="outline"
+        size="sm"
+        disabled={currentPage === 1}
+        onClick={() => onPageChange(1)}
+        className={GLASS_OUTLINE_BTN}
+      >
         Эхлэл
       </Button>
-      <Button variant="outline" size="sm" disabled={currentPage === 1} onClick={() => onPageChange(currentPage - 1)}>
+      <Button
+        variant="outline"
+        size="sm"
+        disabled={currentPage === 1}
+        onClick={() => onPageChange(currentPage - 1)}
+        className={GLASS_OUTLINE_BTN}
+      >
         Өмнөх
       </Button>
 
       <div className="flex items-center gap-1">
         {pageNumbers.map((p, idx) =>
           p === "..." ? (
-            <span key={`ellipsis-${idx}`} className="px-2 text-sm text-muted-foreground">
+            <span key={`ellipsis-${idx}`} className="px-2 text-sm text-white/35">
               ...
             </span>
           ) : (
@@ -116,7 +150,11 @@ function Pagination({
               key={p}
               variant={p === currentPage ? "default" : "outline"}
               size="sm"
-              className="w-9"
+              className={
+                p === currentPage
+                  ? "w-9 bg-blue-500 hover:bg-blue-500/90 text-white shadow-[0_0_16px_rgba(59,130,246,0.45)]"
+                  : `w-9 ${GLASS_OUTLINE_BTN}`
+              }
               onClick={() => onPageChange(p as number)}
             >
               {p}
@@ -130,6 +168,7 @@ function Pagination({
         size="sm"
         disabled={currentPage === totalPages}
         onClick={() => onPageChange(currentPage + 1)}
+        className={GLASS_OUTLINE_BTN}
       >
         Дараагийн
       </Button>
@@ -138,12 +177,13 @@ function Pagination({
         size="sm"
         disabled={currentPage === totalPages}
         onClick={() => onPageChange(totalPages)}
+        className={GLASS_OUTLINE_BTN}
       >
         Төгсгөл
       </Button>
 
-      <div className="flex items-center gap-1.5 ml-2 pl-2 border-l">
-        <span className="text-xs text-muted-foreground whitespace-nowrap">Хуудас:</span>
+      <div className="flex items-center gap-1.5 ml-2 pl-2 border-l border-white/15">
+        <span className="text-xs text-white/40 whitespace-nowrap">Хуудас:</span>
         <Input
           type="number"
           min={1}
@@ -152,10 +192,10 @@ function Pagination({
           onChange={(e) => setJumpValue(e.target.value)}
           onKeyDown={(e) => e.key === "Enter" && handleJump()}
           placeholder={`${currentPage}`}
-          className="w-16 h-8 text-xs text-center"
+          className={`w-16 h-8 text-xs text-center ${GLASS_INPUT}`}
         />
-        <span className="text-xs text-muted-foreground">/ {totalPages}</span>
-        <Button size="sm" variant="outline" className="h-8 text-xs" onClick={handleJump}>
+        <span className="text-xs text-white/40">/ {totalPages}</span>
+        <Button size="sm" variant="outline" className={`h-8 text-xs ${GLASS_OUTLINE_BTN}`} onClick={handleJump}>
           Очих
         </Button>
       </div>
@@ -517,74 +557,77 @@ export default function NewsPage() {
   return (
     <div className="flex flex-col gap-6">
       {errorMessage && (
-        <div className="bg-destructive/10 border border-destructive text-destructive px-4 py-3 rounded-lg">
+        <div className="bg-red-400/10 border border-red-400/30 backdrop-blur-xl text-red-200 px-4 py-3 rounded-2xl">
           <p className="text-sm font-medium">{errorMessage}</p>
         </div>
       )}
 
       <div className="flex flex-col gap-4">
-        <div className="flex gap-4 items-center flex-wrap">
+        <div className={`flex gap-4 items-center flex-wrap p-4 ${GLASS_PANEL}`}>
           <Input
             type="text"
             placeholder="Мэдээ хайх ..."
             value={query}
             onChange={(e) => setQuery(e.target.value)}
-            className="w-full md:w-[300px]"
+            className={`w-full md:w-[300px] ${GLASS_INPUT}`}
           />
 
           <Select value={statusFilter} onValueChange={setStatusFilter}>
-            <SelectTrigger className="w-full md:w-[140px]">
+            <SelectTrigger className={`w-full md:w-[140px] ${GLASS_TRIGGER}`}>
               <SelectValue placeholder="Төлөв" />
             </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">Бүгд</SelectItem>
-              <SelectItem value="active">Идэвхтэй</SelectItem>
-              <SelectItem value="inactive">Идэвхгvй</SelectItem>
+            <SelectContent className={GLASS_CONTENT}>
+              <SelectItem value="all" className={GLASS_ITEM}>Бүгд</SelectItem>
+              <SelectItem value="active" className={GLASS_ITEM}>Идэвхтэй</SelectItem>
+              <SelectItem value="inactive" className={GLASS_ITEM}>Идэвхгvй</SelectItem>
             </SelectContent>
           </Select>
 
           <Select value={languageFilter} onValueChange={setLanguageFilter}>
-            <SelectTrigger className="w-full md:w-[140px]">
+            <SelectTrigger className={`w-full md:w-[140px] ${GLASS_TRIGGER}`}>
               <SelectValue placeholder="Хэл" />
             </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">Бvх хэл</SelectItem>
-              <SelectItem value="mn">Монгол</SelectItem>
-              <SelectItem value="en">English</SelectItem>
+            <SelectContent className={GLASS_CONTENT}>
+              <SelectItem value="all" className={GLASS_ITEM}>Бvх хэл</SelectItem>
+              <SelectItem value="mn" className={GLASS_ITEM}>Монгол</SelectItem>
+              <SelectItem value="en" className={GLASS_ITEM}>English</SelectItem>
             </SelectContent>
           </Select>
 
           <Select value={dateSort} onValueChange={setDateSort}>
-            <SelectTrigger className="w-full md:w-40">
+            <SelectTrigger className={`w-full md:w-40 ${GLASS_TRIGGER}`}>
               <SelectValue placeholder="Эрэмбэлэх" />
             </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="newest">Шинэ → Хуучин</SelectItem>
-              <SelectItem value="oldest">Хуучин → Шинэ</SelectItem>
+            <SelectContent className={GLASS_CONTENT}>
+              <SelectItem value="newest" className={GLASS_ITEM}>Шинэ → Хуучин</SelectItem>
+              <SelectItem value="oldest" className={GLASS_ITEM}>Хуучин → Шинэ</SelectItem>
             </SelectContent>
           </Select>
 
-          <Button className="ml-auto" onClick={openNewModal}>
+          <Button
+            className="ml-auto bg-blue-500/90 hover:bg-blue-500 text-white shadow-[0_0_20px_rgba(59,130,246,0.35)] cursor-pointer"
+            onClick={openNewModal}
+          >
             + Шинэ мэдээ нэмэх
           </Button>
         </div>
 
-        <p className="text-sm text-muted-foreground">
+        <p className="text-sm text-white/45">
           Нийт ({filteredResearch.length}) мэдээ олдлоо
         </p>
       </div>
 
       {loading ? (
-        <p className="text-center text-muted-foreground py-12">Уншиж байна ...</p>
+        <p className="text-center text-white/45 py-12">Уншиж байна ...</p>
       ) : currentItems.length === 0 ? (
-        <div className="text-center text-muted-foreground py-12">
+        <div className={`text-center py-12 ${GLASS_PANEL}`}>
           <Empty>
             <EmptyHeader>
-              <EmptyMedia variant="icon">
+              <EmptyMedia variant="icon" className="bg-white/10 text-white/60">
                 <Folder />
               </EmptyMedia>
-              <EmptyTitle>Мэдээ олдсонгvй.</EmptyTitle>
-              <EmptyDescription>
+              <EmptyTitle className="text-white">Мэдээ олдсонгvй.</EmptyTitle>
+              <EmptyDescription className="text-white/45">
                 Та одоогоор ямар ч мэдээ vvсгээгvй байна.
               </EmptyDescription>
             </EmptyHeader>
@@ -603,7 +646,7 @@ export default function NewsPage() {
               return (
                 <div
                   key={item.id}
-                  className="bg-card rounded-xl overflow-hidden shadow-sm hover:shadow-md transition-shadow duration-200 border flex flex-col"
+                  className={`overflow-hidden transition-all duration-200 flex flex-col hover:-translate-y-1 hover:bg-white/[0.08] ${GLASS_PANEL}`}
                 >
                   {firstImg ? (
                     <Image
@@ -615,32 +658,32 @@ export default function NewsPage() {
                       onError={handleImageError}
                     />
                   ) : (
-                    <div className="w-full h-32 bg-muted flex items-center justify-center text-muted-foreground text-xs">
+                    <div className="w-full h-32 bg-white/[0.03] flex items-center justify-center text-white/30 text-xs">
                       No image
                     </div>
                   )}
 
                   <div className="p-3.5 flex-1 flex flex-col">
                     <div className="flex items-center gap-1.5 mb-1.5">
-                      <h3 className="font-semibold text-sm line-clamp-1 flex-1">
+                      <h3 className="font-semibold text-sm line-clamp-1 flex-1 text-white">
                         {item.title}
                       </h3>
                       <span
                         className={`text-[10px] px-1.5 py-0.5 rounded shrink-0 ${
                           item.language === "mn"
-                            ? "bg-blue-100 text-blue-700"
-                            : "bg-green-100 text-green-700"
+                            ? "bg-blue-400/20 text-blue-200"
+                            : "bg-emerald-400/20 text-emerald-200"
                         }`}
                       >
                         {item.language === "mn" ? "MN" : "EN"}
                       </span>
                       {item.position && (
-                        <span className="text-[10px] bg-yellow-500/80 px-1.5 py-0.5 rounded text-white shrink-0">
+                        <span className="text-[10px] bg-amber-400/80 px-1.5 py-0.5 rounded text-white shrink-0">
                           ⭐
                         </span>
                       )}
                       {item.is_research && (
-                        <span className="text-[10px] bg-blue-600/80 px-1.5 py-0.5 rounded text-white shrink-0">
+                        <span className="text-[10px] bg-blue-500/80 px-1.5 py-0.5 rounded text-white shrink-0">
                           🔬
                         </span>
                       )}
@@ -650,22 +693,22 @@ export default function NewsPage() {
                       <span
                         className={`text-[10px] px-2 py-0.5 rounded-full ${
                           item.status
-                            ? "bg-green-500/80 text-white"
-                            : "bg-gray-400 text-white"
+                            ? "bg-emerald-500/80 text-white"
+                            : "bg-white/15 text-white/70"
                         }`}
                       >
                         {item.status ? "Идэвхтэй" : "Идэвхгvй"}
                       </span>
-                      <span className="text-[10px] text-muted-foreground">
+                      <span className="text-[10px] text-white/40">
                         👁 {item.viewers}
                       </span>
                     </div>
 
-                    <p className="text-[11px] text-muted-foreground mb-1.5">
+                    <p className="text-[11px] text-white/40 mb-1.5">
                       {new Date(item.created_at).toLocaleDateString("mn-MN")}
                     </p>
 
-                    <p className="text-xs text-muted-foreground line-clamp-2 mb-2">
+                    <p className="text-xs text-white/50 line-clamp-2 mb-2">
                       {textPreview}
                     </p>
 
@@ -674,7 +717,7 @@ export default function NewsPage() {
                         size="sm"
                         variant="outline"
                         onClick={() => openEditModal(item)}
-                        className="flex-1 h-8 text-xs"
+                        className={`flex-1 h-8 text-xs cursor-pointer ${GLASS_OUTLINE_BTN}`}
                       >
                         Засах
                       </Button>
@@ -682,7 +725,7 @@ export default function NewsPage() {
                         size="sm"
                         variant="destructive"
                         onClick={() => openDeleteDialog(item)}
-                        className="flex-1 h-8 text-xs"
+                        className="flex-1 h-8 text-xs bg-red-500/80 hover:bg-red-500 text-white cursor-pointer"
                       >
                         Устгах
                       </Button>
@@ -703,13 +746,13 @@ export default function NewsPage() {
 
       {/* Modal */}
       {open && (
-        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
-          <div className="bg-background w-full max-w-[95vw] h-[90vh] rounded-2xl shadow-xl p-6 flex flex-col">
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="bg-white border border-gray-200 w-full max-w-[95vw] h-[90vh] rounded-2xl shadow-2xl p-6 flex flex-col">
             <div className="flex justify-between items-center mb-4">
-              <h2 className="text-xl font-bold">
+              <h2 className="text-xl font-bold text-gray-800">
                 {editId ? "Мэдээ засах" : "Мэдээ нэмэх"}
               </h2>
-              <Button variant="outline" size="sm" onClick={resetModal}>
+              <Button variant="outline" size="sm" onClick={resetModal} className={LIGHT_OUTLINE_BTN}>
                 X
               </Button>
             </div>
@@ -719,20 +762,21 @@ export default function NewsPage() {
                 placeholder="Гарчиг"
                 value={newTitle}
                 onChange={handleTitleChange}
+                className={LIGHT_INPUT}
               />
 
               <div className="flex flex-wrap gap-6">
                 <div className="flex items-center gap-2">
-                  <Label htmlFor="language" className="text-sm whitespace-nowrap font-medium">
+                  <Label htmlFor="language" className="text-sm whitespace-nowrap font-medium text-gray-700">
                     Хэл:
                   </Label>
                   <Select value={newLanguage} onValueChange={setNewLanguage}>
-                    <SelectTrigger className="w-[150px]">
+                    <SelectTrigger className={`w-[150px] ${LIGHT_TRIGGER}`}>
                       <SelectValue placeholder="Хэл сонгох" />
                     </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="mn">Монгол</SelectItem>
-                      <SelectItem value="en">English</SelectItem>
+                    <SelectContent className={LIGHT_CONTENT}>
+                      <SelectItem value="mn" className={LIGHT_ITEM}>Монгол</SelectItem>
+                      <SelectItem value="en" className={LIGHT_ITEM}>English</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
@@ -742,8 +786,9 @@ export default function NewsPage() {
                     id="status"
                     checked={newStatus}
                     onCheckedChange={(checked) => setNewStatus(checked as boolean)}
+                    className={LIGHT_CHECKBOX}
                   />
-                  <Label htmlFor="status" className="text-sm">
+                  <Label htmlFor="status" className="text-sm text-gray-700">
                     Идэвхтэй
                   </Label>
                 </div>
@@ -753,13 +798,14 @@ export default function NewsPage() {
                     id="position"
                     checked={newPosition}
                     onCheckedChange={(checked) => setNewPosition(checked as boolean)}
+                    className={LIGHT_CHECKBOX}
                   />
-                  <Label htmlFor="position">Онцолсон</Label>
+                  <Label htmlFor="position" className="text-gray-700">Онцолсон</Label>
                 </div>
 
                 {editId && (
                   <div className="flex items-center gap-2">
-                    <Label htmlFor="date" className="text-sm whitespace-nowrap">
+                    <Label htmlFor="date" className="text-sm whitespace-nowrap text-gray-700">
                       Огноо:
                     </Label>
                     <Input
@@ -767,21 +813,22 @@ export default function NewsPage() {
                       type="date"
                       value={newCreatedAt}
                       onChange={handleDateChange}
-                      className="w-auto"
+                      className={`w-auto ${LIGHT_INPUT}`}
                     />
                   </div>
                 )}
               </div>
 
               {/* ✅ Хадгалах хэсэг — Хамтын ажиллагаа / Судалгаа */}
-              <div className="flex flex-wrap gap-6 pt-1 border-t pt-3">
+              <div className="flex flex-wrap gap-6 pt-1 border-t border-gray-100 pt-3">
                 <div className="flex items-center space-x-2">
                   <Checkbox
                     id="saveToRndPartner"
                     checked={saveToRndPartner}
                     onCheckedChange={(checked) => setSaveToRndPartner(checked as boolean)}
+                    className={LIGHT_CHECKBOX}
                   />
-                  <Label htmlFor="saveToRndPartner" className="text-sm font-medium">
+                  <Label htmlFor="saveToRndPartner" className="text-sm font-medium text-gray-700">
                     Түншлэл Хамтын ажиллагаа
                   </Label>
                 </div>
@@ -791,15 +838,16 @@ export default function NewsPage() {
                     id="saveToResearch"
                     checked={saveToResearch}
                     onCheckedChange={(checked) => setSaveToResearch(checked as boolean)}
+                    className={LIGHT_CHECKBOX}
                   />
-                  <Label htmlFor="saveToResearch" className="text-sm font-medium">
+                  <Label htmlFor="saveToResearch" className="text-sm font-medium text-gray-700">
                     Судалгаа, нийтлэлvvд
                   </Label>
                 </div>
               </div>
 
               {/* ✅ Бонз дэд ангилалд хадгалах сонголтууд */}
-              <div className="flex flex-col gap-2 pt-3 border-t">
+              <div className="flex flex-col gap-2 pt-3 border-t border-gray-100">
                 <Label className="text-sm font-semibold text-gray-700">
                   Бонз хэсэгт нэмэлтээр хадгалах
                 </Label>
@@ -809,8 +857,9 @@ export default function NewsPage() {
                       id="saveToNature"
                       checked={saveToNature}
                       onCheckedChange={(checked) => setSaveToNature(checked as boolean)}
+                      className={LIGHT_CHECKBOX}
                     />
-                    <Label htmlFor="saveToNature" className="text-sm font-medium">
+                    <Label htmlFor="saveToNature" className="text-sm font-medium text-gray-700">
                       Байгаль
                     </Label>
                   </div>
@@ -820,8 +869,9 @@ export default function NewsPage() {
                       id="saveToPerson"
                       checked={saveToPerson}
                       onCheckedChange={(checked) => setSaveToPerson(checked as boolean)}
+                      className={LIGHT_CHECKBOX}
                     />
-                    <Label htmlFor="saveToPerson" className="text-sm font-medium">
+                    <Label htmlFor="saveToPerson" className="text-sm font-medium text-gray-700">
                       Нийгэм
                     </Label>
                   </div>
@@ -831,26 +881,33 @@ export default function NewsPage() {
                       id="saveToDevelopment"
                       checked={saveToDevelopment}
                       onCheckedChange={(checked) => setSaveToDevelopment(checked as boolean)}
+                      className={LIGHT_CHECKBOX}
                     />
-                    <Label htmlFor="saveToDevelopment" className="text-sm font-medium">
+                    <Label htmlFor="saveToDevelopment" className="text-sm font-medium text-gray-700">
                       Засаглал
                     </Label>
                   </div>
                 </div>
               </div>
 
-              <SimpleEditor
-                key={editId || "new-editor"}
-                content={newContents}
-                onChange={(html: string) => setNewContents(html)}
-              />
+              <div className="rounded-xl border border-gray-200 overflow-hidden">
+                <SimpleEditor
+                  key={editId || "new-editor"}
+                  content={newContents}
+                  onChange={(html: string) => setNewContents(html)}
+                />
+              </div>
             </div>
 
             <div className="flex justify-end mt-4 gap-2">
-              <Button variant="outline" onClick={resetModal} disabled={saving}>
+              <Button variant="outline" onClick={resetModal} disabled={saving} className={LIGHT_OUTLINE_BTN}>
                 Болих
               </Button>
-              <Button onClick={handleSave} disabled={saving}>
+              <Button
+                onClick={handleSave}
+                disabled={saving}
+                className="bg-blue-600 hover:bg-blue-700 text-white"
+              >
                 {saving ? "Хадгалж байна..." : editId ? "Шинэчлэх" : "Нэмэх"}
               </Button>
             </div>
@@ -859,13 +916,13 @@ export default function NewsPage() {
       )}
 
       <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
-        <AlertDialogContent>
+        <AlertDialogContent className="bg-black/70 backdrop-blur-2xl border border-white/15 text-white">
           <AlertDialogHeader>
-            <AlertDialogTitle>Та устгахдаа итгэлтэй байна уу?</AlertDialogTitle>
-            <AlertDialogDescription>
+            <AlertDialogTitle className="text-white">Та устгахдаа итгэлтэй байна уу?</AlertDialogTitle>
+            <AlertDialogDescription className="text-white/55">
               {itemToDelete && (
                 <>
-                  <span className="font-medium text-foreground">
+                  <span className="font-medium text-white">
                     {itemToDelete.title}
                   </span>{" "}
                   гэсэн мэдээг бvрмөсөн устгах гэж байна. Энэ vйлдлийг буцаах
@@ -875,11 +932,13 @@ export default function NewsPage() {
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel disabled={deleting}>Болих</AlertDialogCancel>
+            <AlertDialogCancel disabled={deleting} className={GLASS_OUTLINE_BTN}>
+              Болих
+            </AlertDialogCancel>
             <AlertDialogAction
               onClick={confirmDelete}
               disabled={deleting}
-              className="bg-destructive text-destructive-foreground hover:bg-destructive/90 text-white"
+              className="bg-red-500/90 text-white hover:bg-red-500"
             >
               {deleting ? "Устгаж байна..." : "Устгах"}
             </AlertDialogAction>

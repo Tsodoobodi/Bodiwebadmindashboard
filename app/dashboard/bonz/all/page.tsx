@@ -21,6 +21,14 @@ const API_URL =
 
 const ITEMS_PER_PAGE = 9;
 
+// ---- Shared glass tokens (matching Dashboard / Sidebar / Header / News / VideoNews pages) ----
+const GLASS_PANEL =
+  "rounded-2xl border border-white/12 bg-white/[0.05] backdrop-blur-xl shadow-[0_8px_32px_rgba(0,0,0,0.35)]";
+const GLASS_OUTLINE_BTN =
+  "border-white/15 bg-white/5 text-white/75 hover:bg-white/10 hover:text-white";
+const GLASS_ACTIVE_BTN =
+  "bg-blue-500 hover:bg-blue-500/90 text-white shadow-[0_0_16px_rgba(59,130,246,0.45)] border-transparent";
+
 export default function AllNewsPage() {
   const [allNews, setAllNews] = useState<NewsItem[]>([]);
   const [loading, setLoading] = useState(false);
@@ -114,13 +122,13 @@ export default function AllNewsPage() {
   const getCategoryColor = (category: string) => {
     switch (category) {
       case "development":
-        return "bg-blue-500";
+        return "bg-blue-500/90";
       case "nature":
-        return "bg-green-500";
+        return "bg-emerald-500/90";
       case "news":
-        return "bg-purple-500";
+        return "bg-violet-500/90";
       default:
-        return "bg-gray-500";
+        return "bg-white/20";
     }
   };
 
@@ -160,15 +168,15 @@ export default function AllNewsPage() {
   return (
     <div className="flex flex-col gap-6">
       {/* Header */}
-      <div className="flex flex-col gap-4">
-        <h1 className="text-3xl font-bold">Бүх мэдээ</h1>
+      <div className={`flex flex-col gap-4 p-5 ${GLASS_PANEL}`}>
+        <h1 className="text-3xl font-bold text-white tracking-tight">Бүх мэдээ</h1>
 
         <input
           type="text"
           placeholder="Мэдээ хайх..."
           value={query}
           onChange={(e) => setQuery(e.target.value)}
-          className="w-full max-w-md p-2 rounded-xl border bg-background/50 text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-blue-500 transition"
+          className="w-full max-w-md p-2 rounded-xl border border-white/15 bg-white/5 text-white placeholder:text-white/35 focus:outline-none focus:ring-2 focus:ring-blue-500/50 focus:border-white/30 transition"
         />
 
         <div className="flex gap-2 flex-wrap">
@@ -176,6 +184,7 @@ export default function AllNewsPage() {
             variant={selectedCategory === "all" ? "default" : "outline"}
             onClick={() => setSelectedCategory("all")}
             size="sm"
+            className={selectedCategory === "all" ? GLASS_ACTIVE_BTN : GLASS_OUTLINE_BTN}
           >
             Бүгд ({allNews.length})
           </Button>
@@ -183,6 +192,7 @@ export default function AllNewsPage() {
             variant={selectedCategory === "development" ? "default" : "outline"}
             onClick={() => setSelectedCategory("development")}
             size="sm"
+            className={selectedCategory === "development" ? GLASS_ACTIVE_BTN : GLASS_OUTLINE_BTN}
           >
             Хөгжил ({allNews.filter((n) => n.category === "development").length})
           </Button>
@@ -190,6 +200,7 @@ export default function AllNewsPage() {
             variant={selectedCategory === "nature" ? "default" : "outline"}
             onClick={() => setSelectedCategory("nature")}
             size="sm"
+            className={selectedCategory === "nature" ? GLASS_ACTIVE_BTN : GLASS_OUTLINE_BTN}
           >
             Байгаль ({allNews.filter((n) => n.category === "nature").length})
           </Button>
@@ -197,6 +208,7 @@ export default function AllNewsPage() {
             variant={selectedCategory === "news" ? "default" : "outline"}
             onClick={() => setSelectedCategory("news")}
             size="sm"
+            className={selectedCategory === "news" ? GLASS_ACTIVE_BTN : GLASS_OUTLINE_BTN}
           >
             Хүн ({allNews.filter((n) => n.category === "news").length})
           </Button>
@@ -205,9 +217,9 @@ export default function AllNewsPage() {
 
       {/* News Grid */}
       {loading ? (
-        <p className="text-center text-muted-foreground">Уншиж байна ...</p>
+        <p className="text-center text-white/45">Уншиж байна ...</p>
       ) : filteredNews.length === 0 ? (
-        <p className="text-center text-muted-foreground py-8">Мэдээ олдсонгүй.</p>
+        <p className={`text-center text-white/45 py-8 ${GLASS_PANEL}`}>Мэдээ олдсонгүй.</p>
       ) : (
         <>
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
@@ -220,7 +232,7 @@ export default function AllNewsPage() {
               return (
                 <div
                   key={`${item.category}-${item.id}`}
-                  className="bg-card rounded-xl shadow-sm overflow-hidden flex flex-col transition-shadow duration-200 hover:shadow-md"
+                  className={`overflow-hidden flex flex-col transition-all duration-200 hover:-translate-y-1 hover:bg-white/[0.08] ${GLASS_PANEL}`}
                 >
                   <div className="relative">
                     {firstImg ? (
@@ -232,14 +244,14 @@ export default function AllNewsPage() {
                         className="w-full h-32 object-cover"
                       />
                     ) : (
-                      <div className="w-full h-32 bg-muted flex items-center justify-center text-muted-foreground text-xs">
+                      <div className="w-full h-32 bg-white/[0.03] flex items-center justify-center text-white/30 text-xs">
                         No image
                       </div>
                     )}
                     <span
                       className={`absolute top-2 right-2 ${getCategoryColor(
                         item.category
-                      )} text-white text-[10px] px-2 py-0.5 rounded-full font-medium`}
+                      )} text-white text-[10px] px-2 py-0.5 rounded-full font-medium backdrop-blur-sm`}
                     >
                       {getCategoryLabel(item.category)}
                     </span>
@@ -247,22 +259,26 @@ export default function AllNewsPage() {
 
                   <div className="p-3.5 flex-1 flex flex-col justify-between">
                     <div>
-                      <h3 className="font-semibold text-sm line-clamp-2 mb-1.5">
+                      <h3 className="font-semibold text-sm line-clamp-2 mb-1.5 text-white">
                         {item.title}
                       </h3>
-                      <p className="text-[11px] text-muted-foreground mb-1.5">
+                      <p className="text-[11px] text-white/40 mb-1.5">
                         {new Date(item.created_at).toLocaleDateString("mn-MN", {
                           year: "numeric",
                           month: "long",
                           day: "numeric",
                         })}
                       </p>
-                      <p className="text-xs text-muted-foreground line-clamp-2">
+                      <p className="text-xs text-white/50 line-clamp-2">
                         {textPreview}
                       </p>
                     </div>
 
-                    <Button className="mt-3 w-full h-8 text-xs" size="sm" variant="outline">
+                    <Button
+                      className={`mt-3 w-full h-8 text-xs ${GLASS_OUTLINE_BTN}`}
+                      size="sm"
+                      variant="outline"
+                    >
                       Дэлгэрэнгүй
                     </Button>
                   </div>
@@ -273,11 +289,13 @@ export default function AllNewsPage() {
 
           {/* PAGINATION */}
           {filteredNews.length > ITEMS_PER_PAGE && (
-            <Pagination
-  currentPage={currentPage}
-  totalPages={totalPages}
-  onPageChange={setCurrentPage}
-/>
+            <div className={`p-3 ${GLASS_PANEL}`}>
+              <Pagination
+                currentPage={currentPage}
+                totalPages={totalPages}
+                onPageChange={setCurrentPage}
+              />
+            </div>
           )}
         </>
       )}

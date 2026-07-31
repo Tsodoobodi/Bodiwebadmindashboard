@@ -82,11 +82,11 @@ export default function Sidebar() {
   const isRndActiveNow = rndSubMenu.some((sub) => pathname === sub.href);
 
   const NAV_ITEM_BASE =
-    "flex items-center gap-3 px-4 py-3 rounded-lg font-medium text-[14px] transition-colors duration-200 relative";
+    "flex items-center gap-3 px-4 py-3 rounded-xl font-medium text-[14px] transition-colors duration-200 relative";
 
   if (!mounted) {
     return (
-      <aside className="w-64 h-screen bg-white p-5 flex flex-col gap-1 border-r border-gray-100">
+      <aside className="w-64 h-screen bg-black/40 backdrop-blur-2xl p-5 flex flex-col gap-1 border-r border-white/10">
         <div className="flex items-center justify-center py-4 mb-4">
           <Image src="/images/mainlogo.png" alt="Company Logo" width={150} height={46} priority />
         </div>
@@ -95,12 +95,14 @@ export default function Sidebar() {
   }
 
   return (
-    <aside className="w-64 h-screen relative flex flex-col border-r border-white/20 overflow-hidden">
-      <div className="absolute inset-0 bg-white/70 backdrop-blur-xl" />
+    <aside className="w-64 h-screen relative flex flex-col border-r border-white/15 overflow-hidden">
+      {/* Dark glass base + subtle top sheen, consistent with dashboard GlassPanel */}
+      <div className="absolute inset-0 bg-black/35 backdrop-blur-2xl" />
+      <div className="absolute inset-0 bg-gradient-to-b from-white/[0.08] to-transparent opacity-70 pointer-events-none" />
 
       <div className="relative z-10 flex flex-col h-full">
-        <div className="flex items-center justify-center py-6 px-5 border-b border-white/30">
-          <Image src="/images/mainlogo.png" alt="Company Logo" width={150} height={46} priority />
+        <div className="flex items-center justify-center py-6 px-5 border-b border-white/10">
+          <Image src="/images/mainlogo.png" alt="Company Logo" width={150} height={46} priority className="brightness-0 invert" />
         </div>
 
         <nav className="flex flex-col gap-1 px-3 py-4 overflow-y-auto flex-1">
@@ -121,8 +123,8 @@ export default function Sidebar() {
                     aria-expanded={isOpen}
                     className={`${NAV_ITEM_BASE} w-full justify-between ${
                       isActiveParent
-                        ? "bg-blue-50/80 text-blue-700"
-                        : "text-gray-600 hover:bg-white/50 hover:text-gray-900"
+                        ? "bg-blue-400/15 text-blue-200 ring-1 ring-inset ring-blue-400/25"
+                        : "text-white/65 hover:bg-white/[0.07] hover:text-white"
                     }`}
                   >
                     {isActiveParent && <GlowBar />}
@@ -130,12 +132,12 @@ export default function Sidebar() {
                       <Icon
                         size={18}
                         strokeWidth={2}
-                        className={isActiveParent ? "text-blue-600" : "text-gray-400"}
+                        className={isActiveParent ? "text-blue-300" : "text-white/40"}
                       />
                       <span>{item.label}</span>
                     </div>
                     <motion.div animate={{ rotate: isOpen ? 180 : 0 }} transition={{ duration: 0.2 }}>
-                      <ChevronDown size={16} className="text-gray-400" />
+                      <ChevronDown size={16} className="text-white/40" />
                     </motion.div>
                   </button>
 
@@ -148,7 +150,7 @@ export default function Sidebar() {
                         transition={{ duration: 0.2 }}
                         className="overflow-hidden"
                       >
-                        <div className="flex flex-col gap-0.5 ml-[26px] mt-1 mb-1 pl-4 border-l border-white/40">
+                        <div className="flex flex-col gap-0.5 ml-[26px] mt-1 mb-1 pl-4 border-l border-white/15">
                           {subMenuItems.map((sub) => {
                             const activeSub =
                               pathname === sub.href || pathname.startsWith(sub.href + "/");
@@ -156,10 +158,10 @@ export default function Sidebar() {
                               <Link
                                 key={sub.label}
                                 href={sub.href}
-                                className={`relative px-3 py-2 rounded-md text-[13.5px] transition-colors duration-200 ${
+                                className={`relative px-3 py-2 rounded-lg text-[13.5px] transition-colors duration-200 ${
                                   activeSub
-                                    ? "text-blue-700 font-medium bg-blue-50/80"
-                                    : "text-gray-500 hover:text-gray-800 hover:bg-white/50"
+                                    ? "text-blue-200 font-medium bg-blue-400/15 ring-1 ring-inset ring-blue-400/25"
+                                    : "text-white/50 hover:text-white/85 hover:bg-white/[0.07]"
                                 }`}
                               >
                                 {activeSub && <GlowBar />}
@@ -185,20 +187,20 @@ export default function Sidebar() {
                 href={item.href ?? "#"}
                 className={`${NAV_ITEM_BASE} ${
                   activeTop
-                    ? "bg-blue-50/80 text-blue-700"
-                    : "text-gray-600 hover:bg-white/50 hover:text-gray-900"
+                    ? "bg-blue-400/15 text-blue-200 ring-1 ring-inset ring-blue-400/25"
+                    : "text-white/65 hover:bg-white/[0.07] hover:text-white"
                 }`}
               >
                 {activeTop && <GlowBar />}
-                <Icon size={18} strokeWidth={2} className={activeTop ? "text-blue-600" : "text-gray-400"} />
+                <Icon size={18} strokeWidth={2} className={activeTop ? "text-blue-300" : "text-white/40"} />
                 <span>{item.label}</span>
               </Link>
             );
           })}
         </nav>
 
-        <div className="px-5 py-4 border-t border-white/30 text-center text-xs text-gray-400">
-          © 2026 <span className="font-semibold text-gray-500">Bodi Group</span>
+        <div className="px-5 py-4 border-t border-white/10 text-center text-xs text-white/35">
+          © 2026 <span className="font-semibold text-white/55">Bodi Group</span>
         </div>
       </div>
     </aside>
